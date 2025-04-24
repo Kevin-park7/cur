@@ -2,23 +2,37 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { Session } from 'next-auth';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
+
+interface User {
+  name: string;
+  email: string;
+}
 
 interface Post {
   id: string;
   title: string;
   content: string;
-  user: {
-    name: string;
-  };
+  user: User;
   createdAt: string;
 }
 
+interface CustomSession extends Session {
+  user: {
+    id: string;
+    email: string;
+    name?: string | null;
+  };
+}
+
 export default function BoardPage() {
-  const { data: session } = useSession();
+  const { data: session }: { data: CustomSession | null } = useSession();
   const router = useRouter();
   const [posts, setPosts] = useState<Post[]>([]);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -60,6 +74,32 @@ export default function BoardPage() {
       } catch (err) {
         console.error('Error deleting post:', err);
       }
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!session) return;
+
+    try {
+      const response = await fetch('/api/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title,
+          content,
+          userEmail: session.user.email,
+        }),
+      });
+
+      if (response.ok) {
+        fetchPosts();
+      }
+    } catch (error) {
+      console.error('Error submitting post:', error);
     }
   };
 
@@ -127,6 +167,30 @@ export default function BoardPage() {
                 ))}
               </div>
             )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <input
+                type="text"
+                placeholder="제목"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full p-2 border rounded"
+                required
+              />
+              <textarea
+                placeholder="내용"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="w-full p-2 border rounded h-32"
+                required
+              />
+              <button
+                type="submit"
+                className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+              >
+                글 작성
+              </button>
+            </form>
           </div>
         </div>
       </main>
