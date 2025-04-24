@@ -1,0 +1,188 @@
+@import url('https://fonts.googleapis.com/css2?family=Gaegu:wght@300;400;700&display=swap');
+
+.custom-calendar {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  background: white;
+  border: 2px solid #000 !important;
+  border-radius: 8px;
+  padding: 20px;
+  font-family: 'Gaegu', cursive;
+}
+
+/* 달력 전체 레이아웃 */
+.custom-calendar .react-calendar__viewContainer {
+  padding: 0;
+}
+
+.custom-calendar .react-calendar__month-view {
+  padding: 0;
+}
+
+/* 달력 네비게이션 */
+.custom-calendar .react-calendar__navigation {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+}
+
+.custom-calendar .react-calendar__navigation__label {
+  font-size: 24px;
+  font-weight: bold;
+  color: #000;
+  flex-grow: 1;
+  text-align: center;
+}
+
+.custom-calendar .react-calendar__navigation button {
+  min-width: 40px;
+  height: 40px;
+  background: none;
+  font-size: 24px;
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  outline: none;
+}
+
+.custom-calendar .react-calendar__navigation button:enabled:hover {
+  background-color: #f0f0f0;
+  border-radius: 50%;
+}
+
+.custom-calendar .react-calendar__navigation button:disabled {
+  opacity: 0.3;
+}
+
+/* 요일 헤더 */
+.custom-calendar .react-calendar__month-view__weekdays {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 8px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 16px;
+  background: #f8f8f8;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.custom-calendar .react-calendar__month-view__weekdays__weekday {
+  padding: 8px;
+  border-right: 1px solid #ddd;
+}
+
+.custom-calendar .react-calendar__month-view__weekdays__weekday:last-child {
+  border-right: none;
+}
+
+.custom-calendar .react-calendar__month-view__weekdays__weekday abbr {
+  text-decoration: none;
+  border: none;
+}
+
+/* 날짜 그리드 */
+.custom-calendar .react-calendar__month-view__days {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px !important;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.custom-calendar .react-calendar__tile {
+  aspect-ratio: 1;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid #ddd;
+  font-size: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+}
+
+/* 요일별 색상 */
+.custom-calendar .react-calendar__month-view__days__day:nth-child(7n + 1) {
+  color: #ff0000;
+}
+
+.custom-calendar .react-calendar__month-view__days__day:nth-child(7n) {
+  color: #0000ff;
+}
+
+.custom-calendar .react-calendar__month-view__weekdays__weekday:first-child abbr {
+  color: #ff0000;
+}
+
+.custom-calendar .react-calendar__month-view__weekdays__weekday:last-child abbr {
+  color: #0000ff;
+}
+
+/* 날짜 스타일링 */
+.custom-calendar .react-calendar__tile:enabled:hover {
+  background-color: #f0f0f0;
+  border-color: #999;
+  z-index: 1;
+}
+
+.custom-calendar .react-calendar__tile--now {
+  background: #fff;
+  border: 2px solid #000;
+  font-weight: bold;
+}
+
+.custom-calendar .react-calendar__tile--active {
+  background: #f8f8f8;
+  border: 2px solid #666;
+  font-weight: bold;
+}
+
+.custom-calendar .react-calendar__tile--active:enabled:hover {
+  background: #f0f0f0;
+}
+
+/* 할 일 표시 점 */
+.custom-calendar .has-task::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  width: 6px;
+  height: 6px;
+  background-color: #000;
+  border-radius: 50%;
+}
+
+/* 이전/다음 달 날짜 숨김 */
+.custom-calendar .react-calendar__month-view__days__day--neighboringMonth {
+  visibility: hidden;
+}
+
+/* 공휴일 스타일 */
+.custom-calendar .holiday {
+  background-color: rgba(255, 0, 0, 0.05);
+}
+
+.custom-calendar .holiday-name {
+  font-size: 11px;
+  color: #ff0000;
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 90%;
+  text-align: center;
+} 
