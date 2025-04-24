@@ -11,6 +11,7 @@ interface Post {
   content: string;
   user: {
     name: string;
+    email: string;
   };
   createdAt: string;
 }
