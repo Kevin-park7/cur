@@ -16,7 +16,7 @@ interface Post {
   createdAt: string;
 }
 
-export default async function EditPostPage({ params }: { params: any }) {
+export default async function EditPostPage({ params }: { params: { id: string } }) {
   const { data: session } = useSession();
   const router = useRouter();
   const [post, setPost] = useState<Post | null>(null);
