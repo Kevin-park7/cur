@@ -1,14 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/auth';
 import prisma from '@/lib/prisma';
 
-export async function PATCH(request: NextRequest, context: { params: { id: string } }) {
-  const { id } = context.params;
+export async function PATCH(request, { params }) {
+  const id = params.id;
   const session = await getServerSession(authOptions);
 
-  if (!session || (session.user as any).role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session || (session.user?.role !== 'ADMIN')) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
@@ -20,9 +19,9 @@ export async function PATCH(request: NextRequest, context: { params: { id: strin
       data: { level },
     });
 
-    return NextResponse.json(user);
+    return Response.json(user);
   } catch (error) {
     console.error('Error updating user:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 } 
