@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { Session } from 'next-auth';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 
@@ -19,16 +18,8 @@ interface Post {
   createdAt: string;
 }
 
-interface CustomSession extends Session {
-  user: {
-    id: string;
-    email: string;
-    name?: string | null;
-  };
-}
-
 export default function BoardPage() {
-  const { data: session }: { data: CustomSession | null } = useSession();
+  const { data: session } = useSession();
   const router = useRouter();
   const [posts, setPosts] = useState<Post[]>([]);
   const [title, setTitle] = useState('');
@@ -79,9 +70,7 @@ export default function BoardPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!session) return;
-
     try {
       const response = await fetch('/api/posts', {
         method: 'POST',
@@ -91,10 +80,9 @@ export default function BoardPage() {
         body: JSON.stringify({
           title,
           content,
-          userEmail: session.user.email,
+          userEmail: session.user?.email,
         }),
       });
-
       if (response.ok) {
         fetchPosts();
       }
