@@ -16,7 +16,7 @@ interface Post {
   createdAt: string;
 }
 
-export default function PostDetail({ params }: { params: { id: string } }) {
+export default function PostDetail({ params }) {
   const { data: session } = useSession();
   const router = useRouter();
   const [post, setPost] = useState<Post | null>(null);
