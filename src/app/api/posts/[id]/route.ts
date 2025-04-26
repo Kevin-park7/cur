@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
 import { authOptions } from '../../auth/[...nextauth]/auth';
 
-export async function GET(request, { params }) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   const id = params.id;
   try {
     const post = await prisma.post.findUnique({
@@ -20,7 +20,7 @@ export async function GET(request, { params }) {
   }
 }
 
-export async function DELETE(request, { params }) {
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   const id = params.id;
   try {
     const session = await getServerSession(authOptions);
@@ -41,7 +41,7 @@ export async function DELETE(request, { params }) {
   }
 }
 
-export async function PUT(request, { params }) {
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
   const id = params.id;
   try {
     const session = await getServerSession(authOptions);
