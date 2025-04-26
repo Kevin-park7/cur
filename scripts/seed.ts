@@ -58,7 +58,7 @@ async function main() {
     testUserPosts.push({
       title: `테스트 사용자의 게시글 ${i}`,
       content: `테스트 사용자의 게시글 내용 ${i}`,
-      userId: testUser.id
+      authorId: testUser.id
     });
   }
   await prisma.post.createMany({ data: testUserPosts });
@@ -69,7 +69,7 @@ async function main() {
     seongwonPosts.push({
       title: `성원의 게시글 ${i}`,
       content: `성원의 게시글 내용 ${i}`,
-      userId: seongwon.id
+      authorId: seongwon.id
     });
   }
   await prisma.post.createMany({ data: seongwonPosts });
