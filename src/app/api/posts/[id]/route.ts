@@ -8,7 +8,7 @@ export async function GET(request: Request, { params }: { params: any }) {
     const post = await prisma.post.findUnique({
       where: { id },
       include: {
-        user: { select: { name: true, email: true } }
+        author: { select: { name: true, email: true } }
       }
     });
     if (!post) {
@@ -31,7 +31,7 @@ export async function DELETE(request: Request, { params }: { params: any }) {
     if (!post) {
       return Response.json({ error: 'Post not found' }, { status: 404 });
     }
-    if (post.userId !== session.user.id) {
+    if (post.authorId !== session.user.id) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
     await prisma.post.delete({ where: { id } });
@@ -52,7 +52,7 @@ export async function PUT(request: Request, { params }: { params: any }) {
     if (!post) {
       return Response.json({ error: 'Post not found' }, { status: 404 });
     }
-    if (post.userId !== session.user.id) {
+    if (post.authorId !== session.user.id) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const { title, content } = await request.json();
@@ -62,7 +62,7 @@ export async function PUT(request: Request, { params }: { params: any }) {
     const updatedPost = await prisma.post.update({
       where: { id },
       data: { title, content },
-      include: { user: { select: { name: true, email: true } } }
+      include: { author: { select: { name: true, email: true } } }
     });
     return Response.json(updatedPost);
   } catch (error) {
