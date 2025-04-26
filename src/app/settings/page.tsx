@@ -1,0 +1,181 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import Navigation from '@/components/Navigation';
+
+interface UserSettings {
+  theme: string;
+  layout: {
+    searchBar: { enabled: boolean; position: string };
+    todoList: { enabled: boolean; position: string };
+    board: { enabled: boolean; position: string };
+    games: { enabled: boolean; position: string };
+  };
+}
+
+export default function Settings() {
+  const { data: session } = useSession();
+  const [settings, setSettings] = useState<UserSettings>({
+    theme: 'light',
+    layout: {
+      searchBar: { enabled: true, position: 'top' },
+      todoList: { enabled: true, position: 'left' },
+      board: { enabled: true, position: 'right' },
+      games: { enabled: true, position: 'bottom' },
+    },
+  });
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        const data = await res.json();
+        setSettings(data);
+      }
+    } catch (err) {
+      console.error('Error fetching settings:', err);
+    }
+  };
+
+  const handleThemeChange = (theme: string) => {
+    setSettings(prev => ({ ...prev, theme }));
+  };
+
+  const handleLayoutChange = (component: string, field: string, value: any) => {
+    setSettings(prev => ({
+      ...prev,
+      layout: {
+        ...prev.layout,
+        [component]: {
+          ...prev.layout[component as keyof typeof prev.layout],
+          [field]: value,
+        },
+      },
+    }));
+  };
+
+  const handleSave = async () => {
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings),
+      });
+
+      if (res.ok) {
+        alert('설정이 저장되었습니다.');
+      }
+    } catch (err) {
+      console.error('Error saving settings:', err);
+      alert('설정 저장에 실패했습니다.');
+    }
+  };
+
+  return (
+    <>
+      <Navigation />
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white shadow-lg rounded-lg p-6">
+            <h1 className="text-2xl font-bold mb-6">사용자 설정</h1>
+
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold mb-4">테마 설정</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => handleThemeChange('light')}
+                    className={`p-4 rounded-lg border ${
+                      settings.theme === 'light'
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200'
+                    }`}
+                  >
+                    라이트 모드
+                  </button>
+                  <button
+                    onClick={() => handleThemeChange('dark')}
+                    className={`p-4 rounded-lg border ${
+                      settings.theme === 'dark'
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200'
+                    }`}
+                  >
+                    다크 모드
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <h2 className="text-lg font-semibold mb-4">레이아웃 설정</h2>
+                <div className="space-y-4">
+                  {Object.entries(settings.layout).map(([component, config]) => (
+                    <div key={component} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-medium">
+                          {component === 'searchBar'
+                            ? '검색창'
+                            : component === 'todoList'
+                            ? '할 일 목록'
+                            : component === 'board'
+                            ? '게시판'
+                            : '게임'}
+                        </h3>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={config.enabled}
+                            onChange={(e) =>
+                              handleLayoutChange(component, 'enabled', e.target.checked)
+                            }
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="ml-2 text-sm text-gray-600">활성화</span>
+                        </label>
+                      </div>
+                      {config.enabled && (
+                        <div className="mt-2">
+                          <label className="block text-sm font-medium text-gray-700">
+                            위치
+                          </label>
+                          <select
+                            value={config.position}
+                            onChange={(e) =>
+                              handleLayoutChange(component, 'position', e.target.value)
+                            }
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                          >
+                            <option value="top">상단</option>
+                            <option value="left">좌측</option>
+                            <option value="right">우측</option>
+                            <option value="bottom">하단</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSave}
+                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                >
+                  저장
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+} 

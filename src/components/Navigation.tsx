@@ -13,61 +13,46 @@ export default function Navigation() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
-            <Link href="/" className="flex items-center">
-              <span className="text-xl font-bold bg-gradient-to-r from-sky-500 to-blue-600 bg-clip-text text-transparent font-playfair">
-                My Space
-              </span>
-            </Link>
+            <div className="flex-shrink-0 flex items-center">
+              <Link href="/" className="text-xl font-bold text-gray-800">
+                홈
+              </Link>
+            </div>
+            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+              <Link
+                href="/board"
+                className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                게시판
+              </Link>
+              <Link
+                href="/games"
+                className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                게임
+              </Link>
+            </div>
           </div>
-
-          {/* Desktop menu */}
-          <div className="hidden md:flex items-center space-x-4">
-            {session && (
-              <>
-                <Link
-                  href="/todo"
-                  className="text-gray-700 hover:text-sky-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300 font-poppins"
-                >
-                  Calendar
-                </Link>
-                <Link
-                  href="/board"
-                  className="text-gray-700 hover:text-sky-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300 font-poppins"
-                >
-                  Board
-                </Link>
-              </>
-            )}
+          <div className="hidden sm:ml-6 sm:flex sm:items-center">
             {session ? (
-              <>
-                <span className="text-gray-700 px-3 py-2 text-sm">
-                  {session.user?.name}
-                </span>
+              <div className="flex items-center space-x-4">
+                <span className="text-gray-700">{session.user?.name}</span>
                 <button
                   onClick={() => signOut()}
-                  className="bg-gradient-to-r from-sky-400 to-blue-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-sky-500 hover:to-blue-600 transition-all duration-300 shadow-lg hover:shadow-xl"
+                  className="text-gray-500 hover:text-gray-700"
                 >
-                  Sign Out
+                  로그아웃
                 </button>
-              </>
-            ) : (
-              <div className="flex space-x-4">
-                <Link
-                  href="/auth/signin"
-                  className="bg-gradient-to-r from-sky-400 to-blue-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-sky-500 hover:to-blue-600 transition-all duration-300 shadow-lg hover:shadow-xl font-inter"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/auth/signup"
-                  className="bg-white text-sky-600 border-2 border-sky-500 px-4 py-2 rounded-md text-sm font-medium hover:bg-sky-50 transition-all duration-300 font-inter"
-                >
-                  Sign Up
-                </Link>
               </div>
+            ) : (
+              <Link
+                href="/auth/signin"
+                className="text-gray-500 hover:text-gray-700"
+              >
+                로그인
+              </Link>
             )}
           </div>
-
           {/* Mobile menu button */}
           <div className="md:hidden flex items-center">
             <button

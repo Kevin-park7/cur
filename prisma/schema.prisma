@@ -1,40 +1,136 @@
-datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  todos     Todo[]
-  posts     Post[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-model Todo {
-  id        String   @id @default(cuid())
-  text      String
-  completed Boolean  @default(false)
-  date      DateTime
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String
+  role          Role      @default(USER)
+  level         Level     @default(BRONZE)
+  points        Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  posts         Post[]
+  comments      Comment[]
+  settings      UserSettings?
+  calendars     Calendar[]
+  boards        Board[]
+  savedNews     News[]    @relation("SavedNews")
+  searchHistory SearchHistory[]
+  notifications Notification[]
+}
+
+model UserSettings {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id])
+  theme         String    @default("light")
+  layout        Json      @default("{}")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(cuid())
+  title         String
+  content       String
+  authorId      String
+  author        User      @relation(fields: [authorId], references: [id])
+  comments      Comment[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Comment {
+  id            String    @id @default(cuid())
+  content       String
+  authorId      String
+  author        User      @relation(fields: [authorId], references: [id])
+  postId        String?
+  post          Post?     @relation(fields: [postId], references: [id])
+  boardId       String?
+  board         Board?    @relation(fields: [boardId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Calendar {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  startDate     DateTime
+  endDate       DateTime
+  isAllDay      Boolean   @default(false)
+  color         String    @default("#3788d8")
+  authorId      String
+  author        User      @relation(fields: [authorId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Board {
+  id            String    @id @default(cuid())
+  title         String
+  content       String
+  category      String    @default("general")
+  authorId      String
+  author        User      @relation(fields: [authorId], references: [id])
+  views         Int       @default(0)
+  likes         Int       @default(0)
+  comments      Comment[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model News {
+  id            String    @id @default(cuid())
+  title         String
+  content       String
+  url           String
+  imageUrl      String?
+  source        String
+  publishedAt   DateTime
+  savedBy       User[]    @relation("SavedNews")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model SearchHistory {
+  id            String    @id @default(cuid())
+  query         String
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  createdAt     DateTime  @default(now())
+}
+
+model Notification {
+  id            String    @id @default(cuid())
+  title         String
+  content       String
+  type          String    @default("info")
+  isRead        Boolean   @default(false)
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Level {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+  DIAMOND
 } 

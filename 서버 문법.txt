@@ -1,0 +1,6 @@
+mvn clean install
+mvn package
+mvn tomcat7:run
+
+
+   "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqld" --defaults-file="C:\Program Files\MySQL\MySQL Server 8.0\my.ini" --init-file=C:\mysql-init.txt --console

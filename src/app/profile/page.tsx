@@ -10,8 +10,15 @@ interface UserStats {
   totalPosts: number;
 }
 
-export default function ProfilePage() {
+export default function Profile() {
   const { data: session } = useSession();
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
   const [stats, setStats] = useState<UserStats>({
     totalTodos: 0,
     completedTodos: 0,
@@ -24,6 +31,15 @@ export default function ProfilePage() {
     }
   }, [session]);
 
+  useEffect(() => {
+    if (session?.user) {
+      setFormData(prev => ({
+        ...prev,
+        name: session.user.name || '',
+      }));
+    }
+  }, [session]);
+
   const fetchUserStats = async () => {
     try {
       const res = await fetch('/api/user/stats');
@@ -32,6 +48,11 @@ export default function ProfilePage() {
     } catch (err) {
       console.error('Error fetching user stats:', err);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // TODO: Implement password change and profile update
   };
 
   if (!session) {
@@ -55,55 +76,88 @@ export default function ProfilePage() {
       <Navigation />
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                회원 정보
-              </h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                개인 정보 및 활동 통계
-              </p>
-            </div>
-            <div className="border-t border-gray-200">
-              <dl>
-                <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                  <dt className="text-sm font-medium text-gray-500">이름</dt>
-                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                    {session.user?.name}
-                  </dd>
+          <div className="bg-white shadow-lg rounded-lg p-6">
+            <h1 className="text-2xl font-bold mb-6">내 정보</h1>
+
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold mb-4">기본 정보</h2>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      이메일
+                    </label>
+                    <div className="mt-1 text-gray-900">{session?.user?.email}</div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      이름
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
-                <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                  <dt className="text-sm font-medium text-gray-500">이메일</dt>
-                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                    {session.user?.email}
-                  </dd>
+              </div>
+
+              <div>
+                <h2 className="text-lg font-semibold mb-4">비밀번호 변경</h2>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      현재 비밀번호
+                    </label>
+                    <input
+                      type="password"
+                      value={formData.currentPassword}
+                      onChange={(e) =>
+                        setFormData({ ...formData, currentPassword: e.target.value })
+                      }
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      새 비밀번호
+                    </label>
+                    <input
+                      type="password"
+                      value={formData.newPassword}
+                      onChange={(e) =>
+                        setFormData({ ...formData, newPassword: e.target.value })
+                      }
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      새 비밀번호 확인
+                    </label>
+                    <input
+                      type="password"
+                      value={formData.confirmPassword}
+                      onChange={(e) =>
+                        setFormData({ ...formData, confirmPassword: e.target.value })
+                      }
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
-                <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                  <dt className="text-sm font-medium text-gray-500">활동 통계</dt>
-                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">
-                          {stats.totalTodos}
-                        </div>
-                        <div className="text-sm text-gray-500">전체 할 일</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">
-                          {stats.completedTodos}
-                        </div>
-                        <div className="text-sm text-gray-500">완료된 할 일</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">
-                          {stats.totalPosts}
-                        </div>
-                        <div className="text-sm text-gray-500">작성한 게시글</div>
-                      </div>
-                    </div>
-                  </dd>
-                </div>
-              </dl>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSubmit}
+                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                >
+                  저장
+                </button>
+              </div>
             </div>
           </div>
         </div>
