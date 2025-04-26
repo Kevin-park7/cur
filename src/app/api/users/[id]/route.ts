@@ -4,9 +4,9 @@ import prisma from '@/lib/prisma';
 
 export async function PATCH(
   request: Request,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
-  const id = context.params.id;
+  const id = params.id;
   const session = await getServerSession(authOptions);
 
   if (!session || (session.user?.role !== 'ADMIN')) {

@@ -4,9 +4,9 @@ import { authOptions } from '../../auth/[...nextauth]/auth';
 
 export async function GET(
   request: Request,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
-  const id = context.params.id;
+  const id = params.id;
   try {
     const post = await prisma.post.findUnique({
       where: { id },
@@ -25,9 +25,9 @@ export async function GET(
 
 export async function DELETE(
   request: Request,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
-  const id = context.params.id;
+  const id = params.id;
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -49,9 +49,9 @@ export async function DELETE(
 
 export async function PUT(
   request: Request,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
-  const id = context.params.id;
+  const id = params.id;
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
