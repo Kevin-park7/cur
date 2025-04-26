@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { authOptions } from '../auth/[...nextauth]/auth';
 import prisma from '@/lib/prisma';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    return new NextResponse('Unauthorized', { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
@@ -20,7 +20,7 @@ export async function GET() {
     return NextResponse.json(settings || { theme: 'light', layout: {} });
   } catch (error) {
     console.error('Error fetching settings:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    return new NextResponse('Unauthorized', { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
@@ -53,6 +53,6 @@ export async function POST(request: Request) {
     return NextResponse.json(settings);
   } catch (error) {
     console.error('Error saving settings:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 } 
