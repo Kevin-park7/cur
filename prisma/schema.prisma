@@ -25,6 +25,7 @@ model User {
   savedNews     News[]    @relation("SavedNews")
   searchHistory SearchHistory[]
   notifications Notification[]
+  todos         Todo[]
 }
 
 model UserSettings {
@@ -120,6 +121,17 @@ model Notification {
   user          User      @relation(fields: [userId], references: [id])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+model Todo {
+  id        String   @id @default(cuid())
+  text      String
+  completed Boolean  @default(false)
+  date      DateTime
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum Role {
