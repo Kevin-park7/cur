@@ -5,9 +5,9 @@ import { NextRequest } from 'next/server';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: any
 ) {
-  const id = params.id;
+  const id = context.params.id;
   const session = await getServerSession(authOptions);
 
   if (!session || (session.user?.role !== 'ADMIN')) {
