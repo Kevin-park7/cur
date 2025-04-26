@@ -16,7 +16,8 @@ interface Post {
   createdAt: string;
 }
 
-export default async function EditPostPage({ params }: { params: { id: string } }) {
+export default async function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const { data: session } = useSession();
   const router = useRouter();
   const [post, setPost] = useState<Post | null>(null);
@@ -28,11 +29,11 @@ export default async function EditPostPage({ params }: { params: { id: string } 
 
   useEffect(() => {
     fetchPost();
-  }, [params.id]);
+  }, [id]);
 
   const fetchPost = async () => {
     try {
-      const res = await fetch(`/api/posts/${params.id}`);
+      const res = await fetch(`/api/posts/${id}`);
       if (res.ok) {
         const data = await res.json();
         setPost(data);
@@ -54,7 +55,7 @@ export default async function EditPostPage({ params }: { params: { id: string } 
     setIsSubmitting(true);
 
     try {
-      const res = await fetch(`/api/posts/${params.id}`, {
+      const res = await fetch(`/api/posts/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -63,7 +64,7 @@ export default async function EditPostPage({ params }: { params: { id: string } 
       });
 
       if (res.ok) {
-        router.push(`/board/${params.id}`);
+        router.push(`/board/${id}`);
       }
     } catch (err) {
       console.error('Error updating post:', err);
@@ -88,7 +89,7 @@ export default async function EditPostPage({ params }: { params: { id: string } 
   }
 
   if (session?.user?.email !== post.author.email) {
-    router.push(`/board/${params.id}`);
+    router.push(`/board/${id}`);
     return null;
   }
 
@@ -131,7 +132,7 @@ export default async function EditPostPage({ params }: { params: { id: string } 
                   <div className="flex justify-end space-x-4">
                     <button
                       type="button"
-                      onClick={() => router.push(`/board/${params.id}`)}
+                      onClick={() => router.push(`/board/${id}`)}
                       className="px-4 py-2 text-gray-700 hover:bg-gray-50 rounded focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
                     >
                       취소
