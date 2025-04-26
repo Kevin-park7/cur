@@ -9,14 +9,14 @@ interface Post {
   id: string;
   title: string;
   content: string;
-  user: {
+  author: {
     name: string;
     email: string;
   };
   createdAt: string;
 }
 
-export default function PostDetail({ params }) {
+export default async function PostPage({ params }: { params: any }) {
   const { data: session } = useSession();
   const router = useRouter();
   const [post, setPost] = useState<Post | null>(null);
@@ -86,7 +86,7 @@ export default function PostDetail({ params }) {
             <div className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <h1 className="text-3xl font-bold text-gray-900">{post.title}</h1>
-                {session?.user?.email === post.user.email && (
+                {session?.user?.email === post.author.email && (
                   <div className="flex space-x-2">
                     <button
                       onClick={() => router.push(`/board/${params.id}/edit`)}
@@ -105,7 +105,7 @@ export default function PostDetail({ params }) {
                 )}
               </div>
               <div className="flex items-center text-sm text-gray-500 mb-6">
-                <span>{post.user.name}</span>
+                <span>{post.author.name}</span>
                 <span className="mx-2">•</span>
                 <span>{new Date(post.createdAt).toLocaleDateString('ko-KR')}</span>
               </div>

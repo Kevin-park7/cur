@@ -17,15 +17,9 @@ export async function GET() {
     }
 
     const posts = await prisma.post.findMany({
+      where: { published: true },
       include: {
-        user: {
-          select: {
-            name: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
+        author: { select: { name: true, email: true } }
       }
     });
 
@@ -62,14 +56,11 @@ export async function POST(request: Request) {
       data: {
         title,
         content,
-        userId: session.user.id
+        authorId: session.user.id,
+        published: true,
       },
       include: {
-        user: {
-          select: {
-            name: true
-          }
-        }
+        author: { select: { name: true, email: true } }
       }
     });
 
@@ -105,14 +96,14 @@ export async function PUT(request: Request) {
     const post = await prisma.post.update({
       where: {
         id,
-        userId: session.user.id
+        authorId: session.user.id
       },
       data: {
         title,
         content
       },
       include: {
-        user: {
+        author: {
           select: {
             name: true
           }
@@ -152,7 +143,7 @@ export async function DELETE(request: Request) {
     await prisma.post.delete({
       where: {
         id,
-        userId: session.user.id
+        authorId: session.user.id
       }
     });
 

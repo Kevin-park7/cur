@@ -33,7 +33,7 @@ async function main() {
       text: `테스트 사용자의 할 일 ${i}`,
       completed: Math.random() > 0.5,
       date,
-      userId: testUser.id
+      authorId: testUser.id
     });
   }
   await prisma.todo.createMany({ data: testUserTodos });
@@ -47,7 +47,7 @@ async function main() {
       text: `성원의 할 일 ${i}`,
       completed: Math.random() > 0.5,
       date,
-      userId: seongwon.id
+      authorId: seongwon.id
     });
   }
   await prisma.todo.createMany({ data: seongwonTodos });

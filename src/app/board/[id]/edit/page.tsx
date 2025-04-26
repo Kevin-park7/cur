@@ -9,14 +9,14 @@ interface Post {
   id: string;
   title: string;
   content: string;
-  user: {
+  author: {
     name: string;
     email: string;
   };
   createdAt: string;
 }
 
-export default function EditPost({ params }) {
+export default async function EditPostPage({ params }: { params: any }) {
   const { data: session } = useSession();
   const router = useRouter();
   const [post, setPost] = useState<Post | null>(null);
@@ -87,7 +87,7 @@ export default function EditPost({ params }) {
     );
   }
 
-  if (session?.user?.email !== post.user.email) {
+  if (session?.user?.email !== post.author.email) {
     router.push(`/board/${params.id}`);
     return null;
   }

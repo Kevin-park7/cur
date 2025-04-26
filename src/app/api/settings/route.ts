@@ -13,7 +13,7 @@ export async function GET() {
   try {
     const settings = await prisma.userSettings.findUnique({
       where: {
-        userId: (session.user as any).id,
+        authorId: (session.user as any).id,
       },
     });
 
@@ -37,14 +37,14 @@ export async function POST(request: Request) {
 
     const settings = await prisma.userSettings.upsert({
       where: {
-        userId: (session.user as any).id,
+        authorId: (session.user as any).id,
       },
       update: {
         theme,
         layout,
       },
       create: {
-        userId: (session.user as any).id,
+        authorId: (session.user as any).id,
         theme,
         layout,
       },

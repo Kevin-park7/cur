@@ -18,7 +18,7 @@ export async function GET() {
 
     const todos = await prisma.todo.findMany({
       where: {
-        userId: session.user.id
+        authorId: session.user.id
       },
       orderBy: {
         date: 'desc'
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       data: {
         text,
         date: new Date(date),
-        userId: session.user.id
+        authorId: session.user.id
       }
     });
 
@@ -94,7 +94,7 @@ export async function PUT(request: Request) {
     const todo = await prisma.todo.update({
       where: {
         id,
-        userId: session.user.id
+        authorId: session.user.id
       },
       data: {
         completed
@@ -133,7 +133,7 @@ export async function DELETE(request: Request) {
     await prisma.todo.delete({
       where: {
         id,
-        userId: session.user.id
+        authorId: session.user.id
       }
     });
 

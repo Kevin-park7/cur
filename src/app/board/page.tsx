@@ -15,7 +15,7 @@ interface Post {
   id: string;
   title: string;
   content: string;
-  user: User;
+  author: User;
   createdAt: string;
 }
 
@@ -138,7 +138,7 @@ export default function BoardPage() {
                       <h2 className="text-xl font-semibold text-gray-900">
                         {post.title}
                       </h2>
-                      {session.user?.email === post.user.email && (
+                      {session.user?.email === post.author.email && (
                         <div className="flex space-x-2">
                           <button
                             onClick={() => router.push(`/board/${post.id}/edit`)}
@@ -157,7 +157,7 @@ export default function BoardPage() {
                     </div>
                     <p className="text-gray-600 mb-4 line-clamp-2">{post.content}</p>
                     <div className="flex items-center text-sm text-gray-500">
-                      <span>{post.user.name}</span>
+                      <span>{post.author.name}</span>
                       <span className="mx-2">•</span>
                       <span>
                         {new Date(post.createdAt).toLocaleDateString('ko-KR')}

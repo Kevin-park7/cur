@@ -35,9 +35,9 @@ export default function AdminUsers() {
     }
   };
 
-  const handleLevelChange = async (userId: string, newLevel: string) => {
+  const handleLevelChange = async (authorId: string, newLevel: string) => {
     try {
-      const res = await fetch(`/api/users/${userId}`, {
+      const res = await fetch(`/api/users/${authorId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

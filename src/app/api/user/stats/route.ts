@@ -18,16 +18,16 @@ export async function GET() {
 
     const [totalTodos, completedTodos, totalPosts] = await Promise.all([
       prisma.todo.count({
-        where: { userId: session.user.id }
+        where: { authorId: session.user.id }
       }),
       prisma.todo.count({
         where: {
-          userId: session.user.id,
+          authorId: session.user.id,
           completed: true
         }
       }),
       prisma.post.count({
-        where: { userId: session.user.id }
+        where: { authorId: session.user.id }
       })
     ]);
 
