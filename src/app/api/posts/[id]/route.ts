@@ -1,9 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
 import { authOptions } from '../../auth/[...nextauth]/auth';
 
-export async function GET(request: Request, context: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   const { id } = context.params;
   try {
     const post = await prisma.post.findUnique({
@@ -21,7 +24,10 @@ export async function GET(request: Request, context: { params: { id: string } })
   }
 }
 
-export async function DELETE(request: Request, context: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   const { id } = context.params;
   try {
     const session = await getServerSession(authOptions);
@@ -42,7 +48,10 @@ export async function DELETE(request: Request, context: { params: { id: string }
   }
 }
 
-export async function PUT(request: Request, context: { params: { id: string } }) {
+export async function PUT(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   const { id } = context.params;
   try {
     const session = await getServerSession(authOptions);
