@@ -16,7 +16,8 @@ interface Post {
   createdAt: string;
 }
 
-export default async function PostPage({ params }: { params: { id: string } }) {
+export default async function PostPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const { data: session } = useSession();
   const router = useRouter();
   const [post, setPost] = useState<Post | null>(null);
@@ -24,11 +25,11 @@ export default async function PostPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     fetchPost();
-  }, [params.id]);
+  }, [id]);
 
   const fetchPost = async () => {
     try {
-      const res = await fetch(`/api/posts/${params.id}`);
+      const res = await fetch(`/api/posts/${id}`);
       if (res.ok) {
         const data = await res.json();
         setPost(data);
@@ -48,7 +49,7 @@ export default async function PostPage({ params }: { params: { id: string } }) {
 
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/posts/${params.id}`, {
+      const res = await fetch(`/api/posts/${id}`, {
         method: 'DELETE'
       });
 
@@ -89,7 +90,7 @@ export default async function PostPage({ params }: { params: { id: string } }) {
                 {session?.user?.email === post.author.email && (
                   <div className="flex space-x-2">
                     <button
-                      onClick={() => router.push(`/board/${params.id}/edit`)}
+                      onClick={() => router.push(`/board/${id}/edit`)}
                       className="px-4 py-2 text-green-600 hover:bg-green-50 rounded focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
                     >
                       수정
