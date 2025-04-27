@@ -5,68 +5,61 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Navigation from '@/components/Navigation';
 import Image from 'next/image';
-import axios from 'axios';
 import { FaSearch, FaNewspaper, FaChartLine } from 'react-icons/fa';
+import NewsModal from '@/components/NewsModal';
+import TrendingModal from '@/components/TrendingModal';
 
-interface NewsArticle {
+interface News {
+  id: string;
+  title: string;
+  content: string;
   url: string;
-  title: string;
-  description: string;
+  imageUrl?: string | null;
+  source: string;
+  publishedAt: string;
 }
-
-interface TrendingTopic {
-  title: string;
-  searchCount: number;
-}
-
-// 배경 이미지 URL 배열
-const backgroundImages = [
-  '/backgrounds/news1.jpg',
-  '/backgrounds/news2.jpg',
-  '/backgrounds/news3.jpg',
-  '/backgrounds/news4.jpg',
-  // 더 많은 배경 이미지 추가 가능
-];
 
 export default function Home() {
   const [currentBg, setCurrentBg] = useState(0);
-  const [newsArticles, setNewsArticles] = useState<NewsArticle[]>([]);
-  const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
+  const [newsArticles, setNewsArticles] = useState<News[]>([]);
+  const [allNews, setAllNews] = useState<News[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [showTrendingModal, setShowTrendingModal] = useState(false);
+  const [trendingTopics, setTrendingTopics] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
   const { data: session } = useSession();
+
+  // 배경 이미지 URL 배열
+  const backgroundImages = [
+    '/backgrounds/news1.jpg',
+    '/backgrounds/news2.jpg',
+    '/backgrounds/news3.jpg',
+    '/backgrounds/news4.jpg',
+  ];
 
   // 배경 이미지 자동 변경
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentBg((prev) => (prev + 1) % backgroundImages.length);
-    }, 30000); // 30초마다 변경
-
+    }, 30000);
     return () => clearInterval(timer);
   }, []);
 
-  // 뉴스 데이터 가져오기
+  // 뉴스 데이터 가져오기 (DB 기반)
   useEffect(() => {
     const fetchNews = async () => {
-      try {
-        const response = await axios.get('https://newsapi.org/v2/top-headlines', {
-          params: {
-            country: 'kr',
-            apiKey: process.env.NEXT_PUBLIC_NEWS_API_KEY,
-          },
-        });
-        const articles = response.data.articles.map((article: any) => ({
-          url: article.url,
-          title: article.title,
-          description: article.description,
-        }));
-        setNewsArticles(articles.slice(0, 5));
-      } catch (error) {
-        console.error('Failed to fetch news:', error);
-      }
+      const res = await fetch('/api/news?limit=100');
+      const data = await res.json();
+      setAllNews(data.news);
+      setNewsArticles(data.news.slice(0, 5));
     };
-
     fetchNews();
+  }, []);
+
+  // 트렌드 데이터 임시
+  useEffect(() => {
+    setTrendingTopics(['이재명', '윤석열', '호남 경선', '산불', '교황 장례']);
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -87,7 +80,6 @@ export default function Home() {
           backgroundPosition: 'center',
         }}
       />
-
       {/* 메인 콘텐츠 */}
       <div className="relative z-10 container mx-auto px-4 py-8">
         <Navigation />
@@ -99,7 +91,6 @@ export default function Home() {
             <p className="text-lg md:text-xl text-gray-600 mb-12 animate-fade-in-delay">
               일정 관리와 생각을 나누는 공간
             </p>
-            
             <form onSubmit={handleSearch} className="max-w-2xl mx-auto animate-fade-in-delay-2">
               <div className="relative group">
                 <input
@@ -117,7 +108,6 @@ export default function Home() {
                 </button>
               </div>
             </form>
-
             {session && (
               <div className="mt-16 space-y-8 animate-fade-in-delay-3">
                 <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
@@ -142,7 +132,6 @@ export default function Home() {
                 </div>
               </div>
             )}
-
             {/* 뉴스와 트렌드 섹션 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-16">
               {/* 뉴스 섹션 */}
@@ -161,12 +150,20 @@ export default function Home() {
                       className="block hover:bg-gray-50 p-2 rounded-lg transition-colors"
                     >
                       <h3 className="font-medium text-gray-900">{article.title}</h3>
-                      <p className="text-sm text-gray-500 mt-1">{article.description}</p>
+                      <p className="text-sm text-gray-500 mt-1">{article.content}</p>
                     </a>
                   ))}
                 </div>
+                <div className="flex justify-end mt-4">
+                  <button
+                    className="text-blue-500 hover:text-blue-700 text-sm"
+                    onClick={() => setShowModal(true)}
+                  >
+                    더보기
+                  </button>
+                </div>
+                <NewsModal show={showModal} onClose={() => setShowModal(false)} newsList={allNews} />
               </div>
-
               {/* 트렌드 섹션 */}
               <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 shadow-lg">
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
@@ -174,14 +171,22 @@ export default function Home() {
                   실시간 인기 검색어
                 </h2>
                 <div className="space-y-2">
-                  {/* 임시 데이터 - 실제로는 API에서 가져와야 함 */}
-                  {[1, 2, 3, 4, 5].map((num) => (
-                    <div key={num} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg">
-                      <span className="font-bold text-blue-500">{num}</span>
-                      <span>인기 검색어 {num}</span>
+                  {trendingTopics.map((topic, idx) => (
+                    <div key={idx} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg">
+                      <span className="font-bold text-blue-500">{idx + 1}</span>
+                      <span>{topic}</span>
                     </div>
                   ))}
                 </div>
+                <div className="flex justify-end mt-4">
+                  <button
+                    className="text-blue-500 hover:text-blue-700 text-sm"
+                    onClick={() => setShowTrendingModal(true)}
+                  >
+                    더보기
+                  </button>
+                </div>
+                <TrendingModal show={showTrendingModal} onClose={() => setShowTrendingModal(false)} topics={trendingTopics} />
               </div>
             </div>
           </div>
