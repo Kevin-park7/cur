@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import Navigation from '@/components/Navigation';
 import './calendar.css';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Todo {
   id: string;
@@ -38,20 +38,25 @@ const holidays: { [key: string]: string } = {
 };
 
 export default function TodoPage() {
-  const { data: session } = useSession();
+  const { user, loading } = useAuth();
   const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [newTodo, setNewTodo] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!session) {
-      router.push('/auth/signin');
+    if (!loading && !user) {
+      router.push('/auth/login');
+    }
+  }, [user, loading, router]);
+
+  useEffect(() => {
+    if (!user) {
       return;
     }
     fetchTodos();
-  }, [session]);
+  }, [user]);
 
   const fetchTodos = async () => {
     try {
@@ -151,95 +156,58 @@ export default function TodoPage() {
     return classes.join(' ');
   };
 
-  if (!session) {
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100">
+    <>
       <Navigation />
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-6 font-playfair">나의 할 일</h1>
-            
-            {/* Todo Input Section */}
-            <div className="mb-8">
-              <form onSubmit={handleAddTodo} className="space-y-4">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newTodo}
-                    onChange={(e) => setNewTodo(e.target.value)}
-                    placeholder="새로운 할 일을 입력하세요..."
-                    className="flex-1 px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500 font-inter text-gray-700 placeholder-gray-400"
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white shadow-sm rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <h1 className="text-2xl font-bold text-gray-900 mb-4">할 일 목록</h1>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Calendar
+                    onChange={setSelectedDate}
+                    value={selectedDate}
+                    className="w-full"
                   />
-                  <button
-                    type="submit"
-                    className="bg-gradient-to-r from-sky-400 to-blue-500 text-white px-6 py-3 rounded-lg hover:from-sky-500 hover:to-blue-600 transition-all duration-300 shadow-lg hover:shadow-xl font-poppins"
-                  >
-                    추가하기
-                  </button>
                 </div>
-              </form>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Calendar Section */}
-              <div className="order-2 md:order-1">
-                <Calendar
-                  onChange={(value: any) => {
-                    if (value instanceof Date) {
-                      setSelectedDate(value);
-                    }
-                  }}
-                  value={selectedDate}
-                  className="w-full border-none rounded-lg shadow-md custom-calendar"
-                  tileClassName={getTileClassName}
-                  tileContent={getTileContent}
-                  formatDay={(locale, date) => date.getDate().toString()}
-                  formatMonth={(locale, date) => `${date.getMonth() + 1}월`}
-                  formatYear={(locale, date) => `${date.getFullYear()}년`}
-                  formatMonthYear={(locale, date) => `${date.getFullYear()}년 ${date.getMonth() + 1}월`}
-                  navigationLabel={({ date }) => `${date.getFullYear()}년 ${date.getMonth() + 1}월`}
-                />
-              </div>
-
-              {/* Tasks List Section */}
-              <div className="order-1 md:order-2">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 font-playfair">
-                  {formatDate(selectedDate)}의 할 일
-                  {getHolidayName(selectedDate) && (
-                    <span className="ml-2 text-red-500">
-                      ({getHolidayName(selectedDate)})
-                    </span>
-                  )}
-                </h2>
-                <div className="space-y-3">
-                  {getTodosForDate(selectedDate).length === 0 ? (
-                    <p className="text-gray-500 text-center py-4">등록된 할 일이 없습니다.</p>
-                  ) : (
-                    getTodosForDate(selectedDate).map((todo) => (
-                      <div
-                        key={todo.id}
-                        className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200"
-                      >
-                        <span className="font-inter text-gray-700">{todo.text}</span>
-                        <button
-                          onClick={() => handleDeleteTodo(todo.id)}
-                          className="text-red-500 hover:text-red-600 transition-colors duration-200"
-                        >
-                          삭제
-                        </button>
+                <div>
+                  <div className="space-y-4">
+                    {todos.map((todo) => (
+                      <div key={todo.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                        <input
+                          type="checkbox"
+                          checked={todo.completed}
+                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        />
+                        <span className={`flex-1 ${todo.completed ? 'line-through text-gray-400' : ''}`}>
+                          {todo.text}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {new Date(todo.date).toLocaleDateString()}
+                        </span>
                       </div>
-                    ))
-                  )}
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </>
   );
 } 

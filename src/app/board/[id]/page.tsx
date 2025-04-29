@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Post {
   id: string;
@@ -16,66 +16,27 @@ interface Post {
   createdAt: string;
 }
 
-export default async function PostPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const { data: session } = useSession();
+export default function PostDetailPage({ params }: { params: { id: string } }) {
+  const { user, loading } = useAuth();
   const router = useRouter();
   const [post, setPost] = useState<Post | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    fetchPost();
-  }, [id]);
-
-  const fetchPost = async () => {
-    try {
-      const res = await fetch(`/api/posts/${id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setPost(data);
-      } else {
-        router.push('/board');
-      }
-    } catch (err) {
-      console.error('Error fetching post:', err);
-      router.push('/board');
+    if (!loading && !user) {
+      router.push('/auth/login');
     }
-  };
+  }, [user, loading, router]);
 
-  const handleDelete = async () => {
-    if (!confirm('정말로 이 게시글을 삭제하시겠습니까?')) {
-      return;
-    }
-
-    setIsDeleting(true);
-    try {
-      const res = await fetch(`/api/posts/${id}`, {
-        method: 'DELETE'
-      });
-
-      if (res.ok) {
-        router.push('/board');
-      }
-    } catch (err) {
-      console.error('Error deleting post:', err);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  if (!post) {
+  if (loading) {
     return (
-      <>
-        <Navigation />
-        <div className="min-h-screen bg-gray-50 py-8">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center">
-              <p className="text-gray-600">게시글을 불러오는 중...</p>
-            </div>
-          </div>
-        </div>
-      </>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (
@@ -83,36 +44,21 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
       <Navigation />
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <h1 className="text-3xl font-bold text-gray-900">{post.title}</h1>
-                {session?.user?.email === post.author.email && (
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => router.push(`/board/${id}/edit`)}
-                      className="px-4 py-2 text-green-600 hover:bg-green-50 rounded focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                    >
-                      수정
-                    </button>
-                    <button
-                      onClick={handleDelete}
-                      disabled={isDeleting}
-                      className="px-4 py-2 text-red-600 hover:bg-red-50 rounded focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                    >
-                      {isDeleting ? '삭제 중...' : '삭제'}
-                    </button>
+          <div className="bg-white shadow-sm rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              {post ? (
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-4">{post.title}</h1>
+                  <div className="mb-4 text-sm text-gray-500">
+                    작성자: {post.author.name} | 작성일: {new Date(post.createdAt).toLocaleDateString()}
                   </div>
-                )}
-              </div>
-              <div className="flex items-center text-sm text-gray-500 mb-6">
-                <span>{post.author.name}</span>
-                <span className="mx-2">•</span>
-                <span>{new Date(post.createdAt).toLocaleDateString('ko-KR')}</span>
-              </div>
-              <div className="prose max-w-none">
-                <p className="whitespace-pre-wrap">{post.content}</p>
-              </div>
+                  <div className="prose max-w-none">{post.content}</div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">게시글을 찾을 수 없습니다.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UserStats {
   totalTodos: number;
@@ -10,15 +11,9 @@ interface UserStats {
   totalPosts: number;
 }
 
-export default function Profile() {
-  const { data: session } = useSession();
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
+export default function ProfilePage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
   const [stats, setStats] = useState<UserStats>({
     totalTodos: 0,
     completedTodos: 0,
@@ -26,49 +21,21 @@ export default function Profile() {
   });
 
   useEffect(() => {
-    if (session) {
-      fetchUserStats();
+    if (!loading && !user) {
+      router.push('/auth/login');
     }
-  }, [session]);
+  }, [user, loading, router]);
 
-  useEffect(() => {
-    if (session?.user) {
-      setFormData(prev => ({
-        ...prev,
-        name: session.user.name || '',
-      }));
-    }
-  }, [session]);
-
-  const fetchUserStats = async () => {
-    try {
-      const res = await fetch('/api/user/stats');
-      const data = await res.json();
-      setStats(data);
-    } catch (err) {
-      console.error('Error fetching user stats:', err);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Implement password change and profile update
-  };
-
-  if (!session) {
+  if (loading) {
     return (
-      <>
-        <Navigation />
-        <div className="min-h-screen bg-gray-50 py-8">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center">
-              <h1 className="text-3xl font-bold text-gray-900">프로필</h1>
-              <p className="mt-2 text-gray-600">로그인하여 프로필을 확인하세요</p>
-            </div>
-          </div>
-        </div>
-      </>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (
@@ -76,87 +43,31 @@ export default function Profile() {
       <Navigation />
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white shadow-lg rounded-lg p-6">
-            <h1 className="text-2xl font-bold mb-6">내 정보</h1>
-
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-lg font-semibold mb-4">기본 정보</h2>
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      이메일
-                    </label>
-                    <div className="mt-1 text-gray-900">{session?.user?.email}</div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      이름
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </div>
+          <div className="bg-white shadow-sm rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <div className="flex items-center mb-6">
+                <div className="h-20 w-20 rounded-full bg-indigo-100 flex items-center justify-center text-2xl font-bold text-indigo-600">
+                  {user.email?.[0].toUpperCase()}
+                </div>
+                <div className="ml-4">
+                  <h1 className="text-2xl font-bold text-gray-900">{user.email}</h1>
+                  <p className="text-gray-500">회원</p>
                 </div>
               </div>
 
-              <div>
-                <h2 className="text-lg font-semibold mb-4">비밀번호 변경</h2>
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      현재 비밀번호
-                    </label>
-                    <input
-                      type="password"
-                      value={formData.currentPassword}
-                      onChange={(e) =>
-                        setFormData({ ...formData, currentPassword: e.target.value })
-                      }
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      새 비밀번호
-                    </label>
-                    <input
-                      type="password"
-                      value={formData.newPassword}
-                      onChange={(e) =>
-                        setFormData({ ...formData, newPassword: e.target.value })
-                      }
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      새 비밀번호 확인
-                    </label>
-                    <input
-                      type="password"
-                      value={formData.confirmPassword}
-                      onChange={(e) =>
-                        setFormData({ ...formData, confirmPassword: e.target.value })
-                      }
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-gray-700">전체 할 일</h3>
+                  <p className="text-2xl font-bold text-indigo-600">{stats.totalTodos}</p>
                 </div>
-              </div>
-
-              <div className="flex justify-end">
-                <button
-                  onClick={handleSubmit}
-                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                >
-                  저장
-                </button>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-gray-700">완료된 할 일</h3>
+                  <p className="text-2xl font-bold text-green-600">{stats.completedTodos}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-gray-700">작성한 게시글</h3>
+                  <p className="text-2xl font-bold text-blue-600">{stats.totalPosts}</p>
+                </div>
               </div>
             </div>
           </div>

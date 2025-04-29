@@ -1,8 +1,6 @@
-'use client';
-
 import { Poppins, Playfair_Display, Inter } from 'next/font/google';
 import './globals.css';
-import { SessionProvider } from 'next-auth/react';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -20,17 +18,20 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
+export const metadata = {
+  title: 'My Space',
+  description: 'My personal space application',
+};
+
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="ko" className={`${poppins.variable} ${playfair.variable} ${inter.variable}`}>
       <body className="font-sans">
-        <SessionProvider>
-          {children}
-        </SessionProvider>
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
