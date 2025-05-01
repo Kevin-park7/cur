@@ -1,9 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Navigation from '@/components/Navigation';
-import Image from 'next/image';
 import { FaSearch, FaNewspaper, FaChartLine } from 'react-icons/fa';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
@@ -26,13 +24,8 @@ export default function Home() {
     );
   }
 
-  if (!user) {
-    return null;
-  }
-
   return (
     <main className="min-h-screen bg-gray-50">
-      <Navigation />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -105,6 +98,7 @@ export default function Home() {
               </div>
             </div>
           </div>
+
           <div className="mt-6 flex flex-col items-center gap-8">
             <h1 className="text-4xl font-bold">Welcome</h1>
             <nav className="flex gap-4">
