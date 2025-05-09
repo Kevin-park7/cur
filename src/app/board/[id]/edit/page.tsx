@@ -9,16 +9,27 @@ interface Post {
   id: string;
   title: string;
   content: string;
+  excerpt?: string;
+  status: string;
+  views: number;
+  likesCount: number;
+  commentsCount: number;
+  isFeatured: boolean;
+  isDeleted: boolean;
+  publishedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  authorId: string;
+  categoryId?: string;
   author: {
-    name: string;
-    email: string;
+    username?: string;
+    fullName?: string;
   };
-  createdAt: string;
 }
 
-export default async function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const { data: session } = useSession();
+export default function EditPostPage({ params }: { params: { id: string } }) {
+  const { id } = params;
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [post, setPost] = useState<Post | null>(null);
   const [formData, setFormData] = useState({
@@ -26,26 +37,29 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
     content: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchPost();
+    if (id) {
+      fetchPost();
+    }
   }, [id]);
 
   const fetchPost = async () => {
     try {
       const res = await fetch(`/api/posts/${id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setPost(data);
-        setFormData({
-          title: data.title,
-          content: data.content
-        });
-      } else {
-        router.push('/board');
+      if (!res.ok) {
+        throw new Error('Failed to fetch post');
       }
+      const data = await res.json();
+      setPost(data);
+      setFormData({
+        title: data.title,
+        content: data.content
+      });
     } catch (err) {
       console.error('Error fetching post:', err);
+      setError('게시글을 불러오는데 실패했습니다.');
       router.push('/board');
     }
   };
@@ -53,25 +67,49 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError(null);
 
     try {
       const res = await fetch(`/api/posts/${id}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(formData)
       });
 
-      if (res.ok) {
-        router.push(`/board/${id}`);
+      if (!res.ok) {
+        throw new Error('Failed to update post');
       }
+
+      router.push(`/board/${id}`);
     } catch (err) {
       console.error('Error updating post:', err);
+      setError('게시글 수정에 실패했습니다.');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (status === 'loading') {
+    return (
+      <>
+        <Navigation />
+        <div className="min-h-screen bg-gray-50 py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <p className="text-gray-600">로딩 중...</p>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (status === 'unauthenticated') {
+    router.push('/auth/login');
+    return null;
+  }
 
   if (!post) {
     return (
@@ -88,7 +126,7 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
     );
   }
 
-  if (session?.user?.email !== post.author.email) {
+  if (session?.user?.id !== post.authorId) {
     router.push(`/board/${id}`);
     return null;
   }
@@ -101,6 +139,11 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="p-6">
               <h1 className="text-3xl font-bold text-gray-900 mb-8">게시글 수정</h1>
+              {error && (
+                <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-md">
+                  {error}
+                </div>
+              )}
               <form onSubmit={handleSubmit}>
                 <div className="space-y-4">
                   <div>
@@ -140,7 +183,7 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
                     >
                       {isSubmitting ? '저장 중...' : '저장'}
                     </button>
