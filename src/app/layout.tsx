@@ -1,20 +1,10 @@
-import { Poppins, Playfair_Display, Inter } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-poppins',
-});
-
-const playfair = Playfair_Display({
-  subsets: ['latin'],
-  variable: '--font-playfair',
-});
-
 const inter = Inter({
   subsets: ['latin'],
+  display: 'swap',
   variable: '--font-inter',
 });
 
@@ -29,8 +19,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko" className={`${poppins.variable} ${playfair.variable} ${inter.variable}`}>
-      <body className="font-sans">
+    <html lang="ko" className={inter.variable}>
+      <body>
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
