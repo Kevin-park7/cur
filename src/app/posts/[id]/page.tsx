@@ -10,10 +10,22 @@ interface Post {
   id: string;
   title: string;
   content: string;
-  created_at: string;
+  excerpt?: string;
+  status: string;
   views: number;
-  user_id: string;
-  is_deleted: boolean;
+  likesCount: number;
+  commentsCount: number;
+  isFeatured: boolean;
+  isDeleted: boolean;
+  publishedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  authorId: string;
+  categoryId?: string;
+  author: {
+    username?: string;
+    fullName?: string;
+  };
 }
 
 export default function PostDetailPage({ params }: { params: { id: string } }) {
@@ -161,7 +173,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
             </div>
 
             <div className="flex items-center text-sm text-gray-500 mb-6">
-              <span>작성일: {new Date(post.created_at).toLocaleDateString()}</span>
+              <span>작성일: {new Date(post.createdAt).toLocaleDateString()}</span>
               <span className="mx-2">•</span>
               <span>조회수: {post.views}</span>
             </div>

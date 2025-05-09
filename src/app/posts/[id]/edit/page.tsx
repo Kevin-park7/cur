@@ -10,10 +10,22 @@ interface Post {
   id: string;
   title: string;
   content: string;
-  created_at: string;
+  excerpt?: string;
+  status: string;
   views: number;
-  user_id: string;
-  is_deleted: boolean;
+  likesCount: number;
+  commentsCount: number;
+  isFeatured: boolean;
+  isDeleted: boolean;
+  publishedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  authorId: string;
+  categoryId?: string;
+  author: {
+    username?: string;
+    fullName?: string;
+  };
 }
 
 export default function EditPostPage({ params }: { params: { id: string } }) {

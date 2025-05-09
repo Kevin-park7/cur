@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const posts = await prisma.post.findMany({
       where: {
         status: 'PUBLISHED',
-        deletedAt: null
+        isDeleted: false
       },
       include: {
         author: true,
@@ -49,9 +49,11 @@ export async function POST(request: NextRequest) {
       data: {
         title,
         content,
+        excerpt: content.substring(0, 200),
         authorId: session.user.id,
         status: 'DRAFT',
-        publishedAt: null
+        publishedAt: null,
+        isDeleted: false
       },
       include: {
         author: true
@@ -65,64 +67,45 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+export async function PATCH(request: NextRequest) {
+  const session = await getServerSession(authOptions);
 
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    const { id } = await request.json();
-
-    const { error } = await supabase
-      .from('posts')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', session.user.id);
-
-    if (error) throw error;
-
-    return new NextResponse('OK', { status: 200 });
-  } catch (error) {
-    console.error('Error:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+  if (!session) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
-}
-
-export async function PATCH(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
 
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
     const { id, title, content } = await request.json();
 
-    const { data, error } = await supabase
-      .from('posts')
-      .update({ title, content })
-      .eq('id', id)
-      .eq('user_id', session.user.id)
-      .select(`
-        *,
-        author:user_id (
-          email,
-          user_metadata->>name as name
-        )
-      `)
-      .single();
+    const post = await prisma.post.findUnique({
+      where: { id },
+      select: { authorId: true }
+    });
 
-    if (error) throw error;
+    if (!post) {
+      return Response.json({ error: 'Post not found' }, { status: 404 });
+    }
 
-    return NextResponse.json(data);
+    if (post.authorId !== session.user.id && session.user.role !== 'ADMIN') {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const updatedPost = await prisma.post.update({
+      where: { id },
+      data: {
+        title,
+        content,
+        excerpt: content.substring(0, 200),
+        updatedAt: new Date()
+      },
+      include: {
+        author: true
+      }
+    });
+
+    return Response.json(updatedPost);
   } catch (error) {
-    console.error('Error:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error('Error updating post:', error);
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 } 

@@ -103,8 +103,9 @@ export async function DELETE(
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await prisma.post.delete({
-      where: { id }
+    await prisma.post.update({
+      where: { id },
+      data: { isDeleted: true }
     });
 
     return Response.json({ message: 'Post deleted successfully' });

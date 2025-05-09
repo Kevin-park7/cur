@@ -9,11 +9,22 @@ interface Post {
   id: string;
   title: string;
   content: string;
+  excerpt?: string;
+  status: string;
+  views: number;
+  likesCount: number;
+  commentsCount: number;
+  isFeatured: boolean;
+  isDeleted: boolean;
+  publishedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  authorId: string;
+  categoryId?: string;
   author: {
-    name: string;
-    email: string;
+    username?: string;
+    fullName?: string;
   };
-  createdAt: string;
 }
 
 export default function PostDetailPage({ params }: { params: { id: string } }) {
@@ -50,7 +61,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900 mb-4">{post.title}</h1>
                   <div className="mb-4 text-sm text-gray-500">
-                    작성자: {post.author.name} | 작성일: {new Date(post.createdAt).toLocaleDateString()}
+                    작성자: {post.author.fullName} | 작성일: {new Date(post.createdAt).toLocaleDateString()}
                   </div>
                   <div className="prose max-w-none">{post.content}</div>
                 </div>
