@@ -13,6 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/Table';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Post {
   id: string;
@@ -30,34 +31,40 @@ export default function PostsPage() {
   const [error, setError] = useState<string | null>(null);
   const supabase = createClientComponentClient();
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    fetchPosts();
-  }, []);
-
-  async function fetchPosts() {
-    try {
-      setLoading(true);
-      console.log('Fetching posts...');
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('is_deleted', false)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching posts:', error);
-        return;
-      }
-
-      console.log('Posts fetched successfully:', data);
-      setPosts(data || []);
-    } catch (error) {
-      console.error('Error in fetchPosts:', error);
-    } finally {
-      setLoading(false);
+    if (!authLoading && !user) {
+      router.push('/auth/login');
+      return;
     }
-  }
+
+    const fetchPosts = async () => {
+      try {
+        setLoading(true);
+        console.log('Fetching posts...');
+        const { data, error } = await supabase
+          .from('posts')
+          .select('*')
+          .eq('is_deleted', false)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching posts:', error);
+          return;
+        }
+
+        console.log('Posts fetched successfully:', data);
+        setPosts(data || []);
+      } catch (error) {
+        console.error('Error in fetchPosts:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPosts();
+  }, [user, authLoading, router, supabase]);
 
   async function handleDelete(postId: string) {
     try {
@@ -84,11 +91,23 @@ export default function PostsPage() {
       }
 
       console.log('Post deleted successfully');
-      fetchPosts();
+      await fetchPosts();
     } catch (error) {
       console.error('Error in handleDelete:', error);
       alert('게시글 삭제 중 오류가 발생했습니다.');
     }
+  }
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // 리다이렉트 중이므로 아무것도 표시하지 않음
   }
 
   if (loading) {

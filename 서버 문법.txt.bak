@@ -19,7 +19,3 @@ npm install
 
 # 5. 개발 서버 실행
 npm run dev
-
-
-vercel 개발서버
-supabase 이분화 chatGPT
