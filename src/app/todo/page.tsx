@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Calendar from 'react-calendar';
-import type { OnChangeDateCallback } from 'react-calendar';
 import { Button } from '@/components/ui/Button';
 import { Loader2 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
@@ -81,7 +80,7 @@ export default function TodoPage() {
     }
   }, [status, router, fetchTodos]);
 
-  const handleDateChange: OnChangeDateCallback = (value) => {
+  const handleDateChange = (value: Date | Date[] | null) => {
     if (value instanceof Date) {
       setSelectedDate(value);
     } else {
