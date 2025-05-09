@@ -14,7 +14,8 @@ type Priority = 'low' | 'medium' | 'high';
 type TodoStatus = 'pending' | 'completed' | 'cancelled';
 
 // Calendar 타입 정의
-type CalendarValue = Date | Date[] | null;
+type ValuePiece = Date | null;
+type Value = ValuePiece | [ValuePiece, ValuePiece];
 
 interface Todo {
   id: string;
@@ -104,7 +105,7 @@ export default function TodoPage() {
     };
   }, [status, router]);
 
-  const handleDateChange = useCallback((value: CalendarValue) => {
+  const handleDateChange = useCallback((value: Value) => {
     if (value instanceof Date) {
       setSelectedDate(value);
     } else if (Array.isArray(value) && value[0] instanceof Date) {
