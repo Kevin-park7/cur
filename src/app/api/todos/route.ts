@@ -81,28 +81,26 @@ export async function DELETE(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
-
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const session = await getServerSession(authOptions);
     
-    if (!session) {
+    if (!session?.user) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const { id, completed } = await request.json();
+    const { id, status } = await request.json();
 
-    const { data, error } = await supabase
-      .from('todos')
-      .update({ completed })
-      .eq('id', id)
-      .eq('user_id', session.user.id)
-      .select()
-      .single();
+    const todo = await prisma.todo.update({
+      where: {
+        id,
+        userId: session.user.id
+      },
+      data: {
+        status
+      }
+    });
 
-    if (error) throw error;
-
-    return NextResponse.json(data);
+    return NextResponse.json(todo);
   } catch (error) {
     console.error('Error:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
