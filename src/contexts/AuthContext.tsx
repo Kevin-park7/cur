@@ -1,14 +1,16 @@
 'use client';
 
-import { createContext, useContext } from 'react';
-import { useSession, signIn, signOut } from 'next-auth/react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useSession, signIn as nextAuthSignIn, signOut as nextAuthSignOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
+interface User {
+  id: string;
+  username: string;
+}
+
 interface AuthContextType {
-  user: {
-    id: string;
-    username?: string;
-  } | null;
+  user: User | null;
   loading: boolean;
   signIn: (username: string, password: string) => Promise<void>;
   signUp: (username: string, password: string) => Promise<void>;
@@ -17,13 +19,25 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
+  const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
-  const handleSignIn = async (username: string, password: string) => {
+  useEffect(() => {
+    if (session?.user) {
+      setUser({
+        id: session.user.id,
+        username: session.user.username || ''
+      });
+    } else {
+      setUser(null);
+    }
+  }, [session]);
+
+  const signIn = async (username: string, password: string) => {
     try {
-      const result = await signIn('credentials', {
+      const result = await nextAuthSignIn('credentials', {
         username,
         password,
         redirect: false,
@@ -35,12 +49,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       router.push('/');
     } catch (error) {
-      console.error('Error signing in:', error);
+      console.error('Sign in error:', error);
       throw error;
     }
   };
 
-  const handleSignUp = async (username: string, password: string) => {
+  const signUp = async (username: string, password: string) => {
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -51,39 +65,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message);
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to sign up');
       }
 
-      router.push('/auth/login');
+      await signIn(username, password);
     } catch (error) {
-      console.error('Error signing up:', error);
+      console.error('Sign up error:', error);
       throw error;
     }
   };
 
-  const handleSignOut = async () => {
+  const signOut = async () => {
     try {
-      await signOut({ redirect: false });
+      await nextAuthSignOut({ redirect: false });
+      setUser(null);
       router.push('/auth/login');
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('Sign out error:', error);
       throw error;
     }
   };
 
   const value = {
-    user: session?.user ? {
-      id: session.user.id,
-      username: session.user.username
-    } : null,
+    user,
     loading: status === 'loading',
-    signIn: handleSignIn,
-    signUp: handleSignUp,
-    signOut: handleSignOut,
+    signIn,
+    signUp,
+    signOut,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
