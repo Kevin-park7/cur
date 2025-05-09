@@ -52,7 +52,8 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   session: {
-    strategy: 'jwt'
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60 // 30 days
   },
   pages: {
     signIn: '/auth/login'
@@ -60,10 +61,10 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.id as string;
-        session.user.name = token.name as string | null;
-        session.user.username = token.username as string | null;
-        session.user.role = token.role as string;
+        session.user.id = token.id;
+        session.user.name = token.name;
+        session.user.username = token.username;
+        session.user.role = token.role;
       }
       return session;
     },
@@ -72,6 +73,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.username = user.username;
         token.role = user.role;
+        token.name = user.name;
       }
       return token;
     }
