@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Calendar from 'react-calendar';
-import type { Value } from 'react-calendar';
+import type { Value as CalendarValue } from 'react-calendar/dist/cjs/shared/types';
 import { Button } from '@/components/ui/Button';
 import { Loader2 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
@@ -102,7 +102,7 @@ export default function TodoPage() {
     };
   }, [status, router]);
 
-  const handleDateChange = useCallback((value: Value) => {
+  const handleDateChange = useCallback((value: CalendarValue) => {
     if (value instanceof Date) {
       setSelectedDate(value);
     } else if (Array.isArray(value) && value[0] instanceof Date) {
