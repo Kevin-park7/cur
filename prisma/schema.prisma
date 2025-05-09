@@ -1,0 +1,165 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id            String    @id @default(uuid())
+  username      String?   @unique
+  fullName      String?
+  avatarUrl     String?
+  bio           String?
+  role          String    @default("USER")
+  level         Int       @default(1)
+  points        Int       @default(0)
+  isVerified    Boolean   @default(false)
+  lastActiveAt  DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  userSettings  UserSettings?
+  posts         Post[]
+  comments      Comment[]
+  likes         Like[]
+  todos         Todo[]
+  notifications Notification[]
+}
+
+model UserSettings {
+  id                  String   @id @default(uuid())
+  emailNotifications  Boolean  @default(true)
+  pushNotifications   Boolean  @default(true)
+  theme              String    @default("light")
+  language           String    @default("ko")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // Relations
+  profile            Profile   @relation(fields: [id], references: [id], onDelete: Cascade)
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  slug        String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  posts       Post[]
+}
+
+model Tag {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  slug      String     @unique
+  createdAt DateTime   @default(now())
+
+  // Relations
+  posts     PostTag[]
+}
+
+model Post {
+  id            String     @id @default(uuid())
+  title         String
+  content       String
+  excerpt       String?
+  status        String     @default("draft")
+  views         Int        @default(0)
+  likesCount    Int        @default(0)
+  commentsCount Int        @default(0)
+  isFeatured    Boolean    @default(false)
+  isDeleted     Boolean    @default(false)
+  publishedAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Relations
+  author        Profile    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId      String
+  category      Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId    String?
+  tags          PostTag[]
+  comments      Comment[]
+  likes         Like[]
+}
+
+model PostTag {
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+  tag         Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId       String
+  createdAt   DateTime @default(now())
+
+  @@id([postId, tagId])
+}
+
+model Comment {
+  id          String     @id @default(uuid())
+  content     String
+  likesCount  Int        @default(0)
+  isDeleted   Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  author      Profile    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId    String
+  post        Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+  parent      Comment?   @relation("CommentToComment", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId    String?
+  replies     Comment[]  @relation("CommentToComment")
+  likes       Like[]
+}
+
+model Like {
+  id          String     @id @default(uuid())
+  createdAt   DateTime   @default(now())
+
+  // Relations
+  user        Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  post        Post?      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String?
+  comment     Comment?   @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId   String?
+
+  @@unique([userId, postId, commentId])
+}
+
+model Todo {
+  id          String     @id @default(uuid())
+  title       String
+  description String?
+  dueDate     DateTime?
+  priority    String     @default("medium")
+  status      String     @default("pending")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  user        Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+}
+
+model Notification {
+  id          String     @id @default(uuid())
+  type        String
+  message     String
+  isRead      Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+
+  // Relations
+  user        Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+} 
