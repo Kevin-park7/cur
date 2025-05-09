@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Calendar from 'react-calendar';
-import type { Value } from 'react-calendar';
+import type { OnChangeDateCallback } from 'react-calendar';
 import { Button } from '@/components/ui/Button';
 import { Loader2 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
@@ -53,7 +53,7 @@ export default function TodoPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
 
-  const fetchTodos = async () => {
+  const fetchTodos = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/todos');
@@ -68,7 +68,7 @@ export default function TodoPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -81,7 +81,7 @@ export default function TodoPage() {
     }
   }, [status, router, fetchTodos]);
 
-  const handleDateChange = (value: Value) => {
+  const handleDateChange: OnChangeDateCallback = (value) => {
     if (value instanceof Date) {
       setSelectedDate(value);
     } else {
@@ -123,7 +123,8 @@ export default function TodoPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create todo');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to create todo');
       }
 
       await fetchTodos();
@@ -131,7 +132,7 @@ export default function TodoPage() {
       setSelectedDate(new Date());
     } catch (error) {
       console.error('Error creating todo:', error);
-      alert('할 일 생성 중 오류가 발생했습니다.');
+      alert(error instanceof Error ? error.message : '할 일 생성 중 오류가 발생했습니다.');
     }
   };
 
@@ -152,13 +153,14 @@ export default function TodoPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete todo');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to delete todo');
       }
 
       await fetchTodos();
     } catch (error) {
       console.error('Error deleting todo:', error);
-      alert('할 일 삭제 중 오류가 발생했습니다.');
+      alert(error instanceof Error ? error.message : '할 일 삭제 중 오류가 발생했습니다.');
     }
   };
 
