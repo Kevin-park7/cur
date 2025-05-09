@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Calendar from 'react-calendar';
+import type { Value } from 'react-calendar';
 import { Button } from '@/components/ui/Button';
 import { Loader2 } from 'lucide-react';
-import type { Value } from 'react-calendar/dist/cjs/shared/types';
 import Navigation from '@/components/Navigation';
+import 'react-calendar/dist/Calendar.css';
 import './calendar.css';
 
 interface Todo {
@@ -78,7 +79,7 @@ export default function TodoPage() {
     if (status === 'authenticated') {
       fetchTodos();
     }
-  }, [status, router]);
+  }, [status, router, fetchTodos]);
 
   const handleDateChange = (value: Value) => {
     if (value instanceof Date) {
@@ -101,6 +102,11 @@ export default function TodoPage() {
     const description = formData.get('description') as string;
     const priority = formData.get('priority') as string;
 
+    if (!title.trim()) {
+      alert('제목을 입력해주세요.');
+      return;
+    }
+
     try {
       const response = await fetch('/api/todos', {
         method: 'POST',
@@ -108,10 +114,11 @@ export default function TodoPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          title,
-          description,
+          title: title.trim(),
+          description: description?.trim(),
           priority,
           dueDate: selectedDate,
+          status: 'pending',
         }),
       });
 
@@ -129,6 +136,10 @@ export default function TodoPage() {
   };
 
   const handleDeleteTodo = async (todoId: string) => {
+    if (!confirm('정말로 이 할 일을 삭제하시겠습니까?')) {
+      return;
+    }
+
     try {
       if (!session?.user) {
         alert('로그인이 필요합니다.');
@@ -153,7 +164,8 @@ export default function TodoPage() {
 
   const getTodosForDate = (date: Date) => {
     return todos.filter(todo => {
-      const todoDate = new Date(todo.dueDate || '');
+      if (!todo.dueDate) return false;
+      const todoDate = new Date(todo.dueDate);
       return (
         todoDate.getDate() === date.getDate() &&
         todoDate.getMonth() === date.getMonth() &&
@@ -247,6 +259,7 @@ export default function TodoPage() {
                   id="title"
                   name="title"
                   required
+                  maxLength={100}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                 />
               </div>
@@ -258,6 +271,7 @@ export default function TodoPage() {
                   id="description"
                   name="description"
                   rows={3}
+                  maxLength={500}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                 />
               </div>
@@ -268,6 +282,7 @@ export default function TodoPage() {
                 <select
                   id="priority"
                   name="priority"
+                  required
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                 >
                   <option value="low">낮음</option>
@@ -284,6 +299,8 @@ export default function TodoPage() {
                     onChange={handleDateChange}
                     value={selectedDate}
                     className="w-full"
+                    tileContent={getTileContent}
+                    tileClassName={getTileClassName}
                   />
                 </div>
               </div>
