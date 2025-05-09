@@ -26,7 +26,7 @@ export default function Home() {
               <div className="space-y-6">
                 <div className="bg-white shadow rounded-lg p-6">
                   <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                    {user.email}님, 환영합니다!
+                    {user.username}님, 환영합니다!
                   </h2>
                   <p className="text-gray-600">
                     오늘도 좋은 하루 되세요. 어떤 일을 하고 싶으신가요?
