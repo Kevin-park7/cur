@@ -1,24 +1,24 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]/route';
 
-export async function GET(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
-
+export async function GET() {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const session = await getServerSession(authOptions);
     
-    if (!session) {
+    if (!session?.user) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const { data: todos, error } = await supabase
-      .from('todos')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
+    const todos = await prisma.todo.findMany({
+      where: {
+        userId: session.user.id
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
 
     return NextResponse.json(todos);
   } catch (error) {
@@ -28,33 +28,28 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
-
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const session = await getServerSession(authOptions);
     
-    if (!session) {
+    if (!session?.user) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const { text, date } = await request.json();
+    const body = await request.json();
+    const { title, description, priority, dueDate, status } = body;
 
-    const { data, error } = await supabase
-      .from('todos')
-      .insert([
-        {
-          text,
-          date,
-          user_id: session.user.id,
-          completed: false
-        }
-      ])
-      .select()
-      .single();
+    const todo = await prisma.todo.create({
+      data: {
+        title,
+        description,
+        priority,
+        dueDate: dueDate ? new Date(dueDate) : null,
+        status,
+        userId: session.user.id
+      }
+    });
 
-    if (error) throw error;
-
-    return NextResponse.json(data);
+    return NextResponse.json(todo);
   } catch (error) {
     console.error('Error:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
@@ -62,24 +57,21 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
-
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const session = await getServerSession(authOptions);
     
-    if (!session) {
+    if (!session?.user) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
     const { id } = await request.json();
 
-    const { error } = await supabase
-      .from('todos')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', session.user.id);
-
-    if (error) throw error;
+    await prisma.todo.delete({
+      where: {
+        id,
+        userId: session.user.id
+      }
+    });
 
     return new NextResponse('OK', { status: 200 });
   } catch (error) {

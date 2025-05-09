@@ -346,14 +346,13 @@ export default function TodoPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   마감일
                 </label>
-                <div>
+                <div className={isSubmitting ? 'opacity-50 pointer-events-none' : ''}>
                   <Calendar
                     onChange={handleDateChange}
                     value={selectedDate}
                     className="w-full"
                     tileContent={getTileContent}
                     tileClassName={getTileClassName}
-                    disabled={isSubmitting}
                     aria-label="마감일 선택"
                   />
                 </div>
