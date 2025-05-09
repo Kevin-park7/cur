@@ -9,6 +9,8 @@ interface User {
   id: string;
   username: string;
   role: string;
+  level: number;
+  points: number;
   createdAt: string;
 }
 
@@ -22,6 +24,24 @@ export default function AdminUsersPage() {
       router.push('/auth/login');
     }
   }, [user, loading, router]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('/api/users');
+        if (response.ok) {
+          const data = await response.json();
+          setUsers(data);
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
+    };
+
+    if (user) {
+      fetchUsers();
+    }
+  }, [user]);
 
   if (loading) {
     return (
@@ -48,10 +68,7 @@ export default function AdminUsersPage() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        이름
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        이메일
+                        아이디
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         역할
@@ -62,6 +79,9 @@ export default function AdminUsersPage() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         포인트
                       </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        가입일
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -71,9 +91,6 @@ export default function AdminUsersPage() {
                           <div className="text-sm font-medium text-gray-900">{user.username}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-500">{user.username}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-500">{user.role}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -81,6 +98,11 @@ export default function AdminUsersPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-500">{user.points}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-500">
+                            {new Date(user.createdAt).toLocaleDateString()}
+                          </div>
                         </td>
                       </tr>
                     ))}

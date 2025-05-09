@@ -1,40 +1,36 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import prisma from '@/lib/prisma';
 
 export async function GET(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
-
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const session = await getServerSession(authOptions);
     
     if (!session) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
     // Check if the current user is an admin
-    const { data: currentUser } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', session.user.id)
-      .single();
+    const currentUser = await prisma.profile.findUnique({
+      where: { id: session.user.id },
+      select: { role: true }
+    });
 
     if (!currentUser || currentUser.role !== 'ADMIN') {
       return new NextResponse('Forbidden', { status: 403 });
     }
 
-    const { data: users, error } = await supabase
-      .from('users')
-      .select(`
-        id,
-        username,
-        role,
-        level,
-        points,
-        user_metadata->name as name
-      `);
-
-    if (error) throw error;
+    const users = await prisma.profile.findMany({
+      select: {
+        id: true,
+        username: true,
+        role: true,
+        level: true,
+        points: true,
+        createdAt: true
+      }
+    });
 
     return NextResponse.json(users);
   } catch (error) {
@@ -44,21 +40,18 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
-
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const session = await getServerSession(authOptions);
     
     if (!session) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
     // Check if the current user is an admin
-    const { data: currentUser } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', session.user.id)
-      .single();
+    const currentUser = await prisma.profile.findUnique({
+      where: { id: session.user.id },
+      select: { role: true }
+    });
 
     if (!currentUser || currentUser.role !== 'ADMIN') {
       return new NextResponse('Forbidden', { status: 403 });
@@ -66,16 +59,20 @@ export async function PATCH(request: Request) {
 
     const { id, role, level, points } = await request.json();
 
-    const { data, error } = await supabase
-      .from('users')
-      .update({ role, level, points })
-      .eq('id', id)
-      .select()
-      .single();
+    const user = await prisma.profile.update({
+      where: { id },
+      data: { role, level, points },
+      select: {
+        id: true,
+        username: true,
+        role: true,
+        level: true,
+        points: true,
+        createdAt: true
+      }
+    });
 
-    if (error) throw error;
-
-    return NextResponse.json(data);
+    return NextResponse.json(user);
   } catch (error) {
     console.error('Error:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
