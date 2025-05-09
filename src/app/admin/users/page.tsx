@@ -7,11 +7,9 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface User {
   id: string;
-  name: string;
-  email: string;
+  username: string;
   role: string;
-  level: string;
-  points: number;
+  createdAt: string;
 }
 
 export default function AdminUsersPage() {
@@ -70,10 +68,10 @@ export default function AdminUsersPage() {
                     {users.map((user) => (
                       <tr key={user.id}>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                          <div className="text-sm font-medium text-gray-900">{user.username}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-500">{user.email}</div>
+                          <div className="text-sm text-gray-500">{user.username}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-500">{user.role}</div>

@@ -47,10 +47,10 @@ export default function ProfilePage() {
             <div className="px-4 py-5 sm:p-6">
               <div className="flex items-center mb-6">
                 <div className="h-20 w-20 rounded-full bg-indigo-100 flex items-center justify-center text-2xl font-bold text-indigo-600">
-                  {user.email?.[0].toUpperCase()}
+                  {user.username?.[0].toUpperCase()}
                 </div>
                 <div className="ml-4">
-                  <h1 className="text-2xl font-bold text-gray-900">{user.email}</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">{user.username}</h1>
                   <p className="text-gray-500">회원</p>
                 </div>
               </div>

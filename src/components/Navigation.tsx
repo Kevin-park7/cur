@@ -57,7 +57,7 @@ export default function Navigation() {
               <div className="ml-3 relative">
                 <div className="flex items-center space-x-4">
                   <span className="text-sm text-gray-500">
-                    {user.email}님 환영합니다!
+                    {user.username}님 환영합니다!
                   </span>
                   <div>
                     <button
@@ -67,7 +67,7 @@ export default function Navigation() {
                     >
                       <span className="sr-only">Open user menu</span>
                       <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white">
-                        {user.email?.[0].toUpperCase()}
+                        {user.username?.[0].toUpperCase()}
                       </div>
                     </button>
                   </div>
@@ -186,7 +186,7 @@ export default function Navigation() {
           {user ? (
             <div className="space-y-1">
               <div className="px-4 py-2 text-base font-medium text-gray-500">
-                {user.email}님 환영합니다!
+                {user.username}님 환영합니다!
               </div>
               <Link
                 href="/profile"

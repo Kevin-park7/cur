@@ -73,7 +73,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const value = {
-    user: session?.user || null,
+    user: session?.user ? {
+      id: session.user.id,
+      username: session.user.username
+    } : null,
     loading: status === 'loading',
     signIn: handleSignIn,
     signUp: handleSignUp,

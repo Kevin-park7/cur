@@ -9,10 +9,7 @@ interface Post {
   id: string;
   title: string;
   content: string;
-  author: {
-    name: string;
-    email: string;
-  };
+  username: string;
   createdAt: string;
 }
 
@@ -54,7 +51,7 @@ export default function BoardPage() {
                     <h2 className="text-xl font-semibold">{post.title}</h2>
                     <p className="text-gray-600 mt-2">{post.content}</p>
                     <div className="mt-2 text-sm text-gray-500">
-                      작성자: {post.author.name} | 작성일: {new Date(post.createdAt).toLocaleDateString()}
+                      작성자: {post.username} | 작성일: {new Date(post.createdAt).toLocaleDateString()}
                     </div>
                   </div>
                 ))}

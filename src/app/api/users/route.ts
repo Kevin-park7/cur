@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       .from('users')
       .select(`
         id,
-        email,
+        username,
         role,
         level,
         points,
