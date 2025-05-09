@@ -21,10 +21,17 @@ export const authOptions: NextAuthOptions = {
         const user = await prisma.profile.findUnique({
           where: {
             username: credentials.username
+          },
+          select: {
+            id: true,
+            username: true,
+            password: true,
+            role: true,
+            fullName: true
           }
         });
 
-        if (!user || !user.password) {
+        if (!user?.password) {
           throw new Error('Invalid credentials');
         }
 
@@ -37,7 +44,12 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Invalid credentials');
         }
 
-        return user;
+        return {
+          id: user.id,
+          username: user.username,
+          role: user.role,
+          name: user.fullName
+        };
       }
     })
   ],
