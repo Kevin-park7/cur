@@ -1,18 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Calendar from 'react-calendar';
-import 'react-calendar/dist/Calendar.css';
+import { Button } from '@/components/ui/Button';
+import { Loader2 } from 'lucide-react';
+import type { Value } from 'react-calendar/dist/cjs/shared/types';
 import Navigation from '@/components/Navigation';
 import './calendar.css';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface Todo {
   id: string;
-  text: string;
-  date: string;
-  completed: boolean;
+  title: string;
+  description?: string;
+  dueDate?: Date;
+  priority: string;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string;
 }
 
 // 공휴일 데이터
@@ -38,93 +45,121 @@ const holidays: { [key: string]: string } = {
 };
 
 export default function TodoPage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
   const [todos, setTodos] = useState<Todo[]>([]);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [newTodo, setNewTodo] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/auth/login');
-    }
-  }, [user, loading, router]);
-
-  useEffect(() => {
-    if (!user) {
-      return;
-    }
-    fetchTodos();
-  }, [user]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const router = useRouter();
+  const { data: session, status } = useSession();
 
   const fetchTodos = async () => {
     try {
-      const res = await fetch('/api/todos');
-      if (res.ok) {
-        const data = await res.json();
-        setTodos(data);
+      setLoading(true);
+      const response = await fetch('/api/todos');
+      if (!response.ok) {
+        throw new Error('Failed to fetch todos');
       }
+      const data = await response.json();
+      setTodos(data);
     } catch (error) {
       console.error('Error fetching todos:', error);
+      setError('할 일을 불러오는데 실패했습니다.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/login');
+      return;
+    }
+
+    if (status === 'authenticated') {
+      fetchTodos();
+    }
+  }, [status, router]);
+
+  const handleDateChange = (value: Value) => {
+    if (value instanceof Date) {
+      setSelectedDate(value);
+    } else {
+      setSelectedDate(null);
+    }
+  };
+
+  const handleAddTodo = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!session?.user) {
+      alert('로그인이 필요합니다.');
+      router.push('/auth/login');
+      return;
+    }
+
+    const formData = new FormData(e.currentTarget);
+    const title = formData.get('title') as string;
+    const description = formData.get('description') as string;
+    const priority = formData.get('priority') as string;
+
+    try {
+      const response = await fetch('/api/todos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title,
+          description,
+          priority,
+          dueDate: selectedDate,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create todo');
+      }
+
+      await fetchTodos();
+      e.currentTarget.reset();
+      setSelectedDate(new Date());
+    } catch (error) {
+      console.error('Error creating todo:', error);
+      alert('할 일 생성 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleDeleteTodo = async (todoId: string) => {
+    try {
+      if (!session?.user) {
+        alert('로그인이 필요합니다.');
+        router.push('/auth/login');
+        return;
+      }
+
+      const response = await fetch(`/api/todos/${todoId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete todo');
+      }
+
+      await fetchTodos();
+    } catch (error) {
+      console.error('Error deleting todo:', error);
+      alert('할 일 삭제 중 오류가 발생했습니다.');
     }
   };
 
   const getTodosForDate = (date: Date) => {
     return todos.filter(todo => {
-      const todoDate = new Date(todo.date);
+      const todoDate = new Date(todo.dueDate || '');
       return (
         todoDate.getDate() === date.getDate() &&
         todoDate.getMonth() === date.getMonth() &&
         todoDate.getFullYear() === date.getFullYear()
       );
     });
-  };
-
-  const handleAddTodo = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTodo.trim()) return;
-
-    try {
-      const res = await fetch('/api/todos', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: newTodo,
-          date: selectedDate.toISOString(),
-        }),
-      });
-
-      if (res.ok) {
-        const newTodoItem = await res.json();
-        setTodos([...todos, newTodoItem]);
-        setNewTodo('');
-      }
-    } catch (error) {
-      console.error('Error adding todo:', error);
-    }
-  };
-
-  const handleDeleteTodo = async (id: string) => {
-    try {
-      const res = await fetch('/api/todos', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id }),
-      });
-
-      if (res.ok) {
-        setTodos(todos.filter(todo => todo.id !== id));
-      }
-    } catch (error) {
-      console.error('Error deleting todo:', error);
-    }
   };
 
   const formatDate = (date: Date) => {
@@ -156,7 +191,7 @@ export default function TodoPage() {
     return classes.join(' ');
   };
 
-  if (loading) {
+  if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-indigo-500"></div>
@@ -164,47 +199,138 @@ export default function TodoPage() {
     );
   }
 
-  if (!user) {
+  if (status === 'unauthenticated') {
     return null;
+  }
+
+  if (loading) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex justify-center items-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="text-center text-red-500 py-8">
+          {error}
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={fetchTodos}
+          >
+            다시 시도
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
     <>
       <Navigation />
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white shadow-sm rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h1 className="text-2xl font-bold text-gray-900 mb-4">할 일 목록</h1>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="container mx-auto py-8 px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-8">할 일 관리</h1>
+            <form onSubmit={handleAddTodo} className="space-y-4">
+              <div>
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                  제목
+                </label>
+                <input
+                  type="text"
+                  id="title"
+                  name="title"
+                  required
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                  설명
+                </label>
+                <textarea
+                  id="description"
+                  name="description"
+                  rows={3}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="priority" className="block text-sm font-medium text-gray-700">
+                  우선순위
+                </label>
+                <select
+                  id="priority"
+                  name="priority"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                >
+                  <option value="low">낮음</option>
+                  <option value="medium">중간</option>
+                  <option value="high">높음</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  마감일
+                </label>
                 <div>
                   <Calendar
-                    onChange={setSelectedDate}
+                    onChange={handleDateChange}
                     value={selectedDate}
                     className="w-full"
                   />
                 </div>
-                <div>
-                  <div className="space-y-4">
-                    {todos.map((todo) => (
-                      <div key={todo.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                        <input
-                          type="checkbox"
-                          checked={todo.completed}
-                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                        />
-                        <span className={`flex-1 ${todo.completed ? 'line-through text-gray-400' : ''}`}>
-                          {todo.text}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {new Date(todo.date).toLocaleDateString()}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </div>
-            </div>
+              <Button
+                type="submit"
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                할 일 추가
+              </Button>
+            </form>
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">할 일 목록</h2>
+            {todos.length === 0 ? (
+              <p className="text-gray-500">등록된 할 일이 없습니다.</p>
+            ) : (
+              <div className="space-y-4">
+                {todos.map((todo) => (
+                  <div
+                    key={todo.id}
+                    className="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900">{todo.title}</h3>
+                        {todo.description && (
+                          <p className="mt-1 text-gray-600">{todo.description}</p>
+                        )}
+                        <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
+                          <span>우선순위: {todo.priority}</span>
+                          {todo.dueDate && (
+                            <span>마감일: {new Date(todo.dueDate).toLocaleDateString()}</span>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteTodo(todo.id)}
+                      >
+                        삭제
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
