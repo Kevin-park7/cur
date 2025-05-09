@@ -27,19 +27,18 @@ export async function POST(request: NextRequest) {
       data: newsList.map((news: NewsInput) => ({
         title: news.title,
         content: news.content,
-        url: news.url,
-        imageUrl: news.imageUrl || null,
-        source: news.source,
+        excerpt: news.content.substring(0, 200),
         authorId: session.user.id,
         status: 'PUBLISHED',
-        publishedAt: new Date(news.publishedAt)
+        publishedAt: new Date(news.publishedAt),
+        isDeleted: false
       })),
       skipDuplicates: true
     });
-    return Response.json({ success: true, count: created.count });
+    return NextResponse.json({ success: true, count: created.count });
   } catch (error) {
     console.error('Error creating news:', error);
-    return Response.json({ error: 'Error creating news' }, { status: 500 });
+    return NextResponse.json({ error: 'Error creating news' }, { status: 500 });
   }
 }
 
@@ -48,7 +47,15 @@ export async function GET() {
     const news = await prisma.post.findMany({
       where: {
         status: 'PUBLISHED',
-        deletedAt: null
+        isDeleted: false
+      },
+      include: {
+        author: {
+          select: {
+            username: true,
+            fullName: true
+          }
+        }
       },
       orderBy: {
         publishedAt: 'desc'
