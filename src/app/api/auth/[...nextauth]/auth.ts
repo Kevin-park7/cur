@@ -10,17 +10,17 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: 'credentials',
       credentials: {
-        email: { label: 'Email', type: 'email' },
+        username: { label: 'Username', type: 'text' },
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials?.username || !credentials?.password) {
           throw new Error('Invalid credentials');
         }
 
         const user = await prisma.profile.findUnique({
           where: {
-            email: credentials.email
+            username: credentials.username
           }
         });
 
@@ -52,7 +52,7 @@ export const authOptions: NextAuthOptions = {
       if (token) {
         session.user.id = token.id;
         session.user.name = token.name;
-        session.user.email = token.email;
+        session.user.username = token.username;
         session.user.role = token.role;
       }
       return session;
@@ -60,6 +60,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.username = user.username;
         token.role = user.role;
       }
       return token;
