@@ -30,33 +30,25 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(req: Request) {
-  // 오늘 날짜 기준
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  // 오늘의 뉴스 100개 가져오기 (중복 제거)
-  const news = await prisma.news.findMany({
-    where: {
-      publishedAt: {
-        gte: today,
+export async function GET() {
+  try {
+    const news = await prisma.post.findMany({
+      where: {
+        status: 'published',
+        isDeleted: false
       },
-    },
-    orderBy: { publishedAt: 'desc' },
-    take: 200, // 넉넉히 가져와서 중복 제거
-  });
+      orderBy: {
+        publishedAt: 'desc'
+      },
+      take: 10
+    });
 
-  // 제목+내용 기준 중복 제거
-  const uniqueNews: typeof news = [];
-  const seen = new Set<string>();
-  for (const n of news) {
-    const key = n.title + n.content;
-    if (!seen.has(key)) {
-      uniqueNews.push(n);
-      seen.add(key);
-    }
-    if (uniqueNews.length >= 100) break;
+    return NextResponse.json(news);
+  } catch (error) {
+    console.error('Error fetching news:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch news' },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json({ news: uniqueNews });
 } 

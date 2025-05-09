@@ -18,7 +18,7 @@ export async function PATCH(
     const body = await request.json();
     const { level } = body;
 
-    const user = await prisma.user.update({
+    const user = await prisma.profile.update({
       where: { id },
       data: { level },
     });

@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth';
-import prisma from '@/lib/prisma';
 import { authOptions } from '../../auth/[...nextauth]/auth';
+import prisma from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 
 export async function GET(
@@ -8,19 +8,73 @@ export async function GET(
   context: any
 ) {
   const id = context.params.id;
+
   try {
     const post = await prisma.post.findUnique({
       where: { id },
       include: {
-        author: { select: { name: true, email: true } }
+        author: true,
+        comments: {
+          include: {
+            author: true
+          }
+        }
       }
     });
+
     if (!post) {
       return Response.json({ error: 'Post not found' }, { status: 404 });
     }
+
     return Response.json(post);
   } catch (error) {
-    return Response.json({ error: 'Error fetching post' }, { status: 500 });
+    console.error('Error fetching post:', error);
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  context: any
+) {
+  const id = context.params.id;
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { title, content, status } = body;
+
+    const post = await prisma.post.findUnique({
+      where: { id },
+      select: { authorId: true }
+    });
+
+    if (!post) {
+      return Response.json({ error: 'Post not found' }, { status: 404 });
+    }
+
+    if (post.authorId !== session.user.id && session.user.role !== 'ADMIN') {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const updatedPost = await prisma.post.update({
+      where: { id },
+      data: {
+        title,
+        content,
+        status,
+        updatedAt: new Date()
+      }
+    });
+
+    return Response.json(updatedPost);
+  } catch (error) {
+    console.error('Error updating post:', error);
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
@@ -29,53 +83,33 @@ export async function DELETE(
   context: any
 ) {
   const id = context.params.id;
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const post = await prisma.post.findUnique({ where: { id } });
-    if (!post) {
-      return Response.json({ error: 'Post not found' }, { status: 404 });
-    }
-    if (post.authorId !== session.user.id) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    await prisma.post.delete({ where: { id } });
-    return Response.json({ success: true });
-  } catch (error) {
-    return Response.json({ error: 'Error deleting post' }, { status: 500 });
-  }
-}
+  const session = await getServerSession(authOptions);
 
-export async function PUT(
-  request: NextRequest,
-  context: any
-) {
-  const id = context.params.id;
+  if (!session) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const post = await prisma.post.findUnique({ where: { id } });
+    const post = await prisma.post.findUnique({
+      where: { id },
+      select: { authorId: true }
+    });
+
     if (!post) {
       return Response.json({ error: 'Post not found' }, { status: 404 });
     }
-    if (post.authorId !== session.user.id) {
+
+    if (post.authorId !== session.user.id && session.user.role !== 'ADMIN') {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const { title, content } = await request.json();
-    if (!title || !content) {
-      return Response.json({ error: 'Title and content are required' }, { status: 400 });
-    }
-    const updatedPost = await prisma.post.update({
-      where: { id },
-      data: { title, content },
-      include: { author: { select: { name: true, email: true } } }
+
+    await prisma.post.delete({
+      where: { id }
     });
-    return Response.json(updatedPost);
+
+    return Response.json({ message: 'Post deleted successfully' });
   } catch (error) {
-    return Response.json({ error: 'Error updating post' }, { status: 500 });
+    console.error('Error deleting post:', error);
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 } 

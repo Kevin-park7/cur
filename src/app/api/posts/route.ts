@@ -1,73 +1,67 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]/auth';
+import prisma from '@/lib/prisma';
+import { NextRequest } from 'next/server';
 
-export async function GET(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
-
+export async function GET(request: NextRequest) {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const posts = await prisma.post.findMany({
+      where: {
+        status: 'PUBLISHED',
+        deletedAt: null
+      },
+      include: {
+        author: true,
+        comments: {
+          include: {
+            author: true
+          }
+        }
+      },
+      orderBy: {
+        publishedAt: 'desc'
+      }
+    });
 
-    const { data: posts, error } = await supabase
-      .from('posts')
-      .select(`
-        *,
-        author:user_id (
-          email,
-          user_metadata->>name as name
-        )
-      `)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    return NextResponse.json(posts);
+    return Response.json(posts);
   } catch (error) {
-    console.error('Error:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error('Error fetching posts:', error);
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 });
+    const body = await request.json();
+    const { title, content } = body;
+
+    if (!title || !content) {
+      return Response.json({ error: 'Title and content are required' }, { status: 400 });
     }
 
-    const { title, content } = await request.json();
+    const post = await prisma.post.create({
+      data: {
+        title,
+        content,
+        authorId: session.user.id,
+        status: 'DRAFT',
+        publishedAt: null
+      },
+      include: {
+        author: true
+      }
+    });
 
-    const { data, error } = await supabase
-      .from('posts')
-      .insert([
-        {
-          title,
-          content,
-          user_id: session.user.id
-        }
-      ])
-      .select(`
-        *,
-        author:user_id (
-          email,
-          user_metadata->>name as name
-        )
-      `)
-      .single();
-
-    if (error) throw error;
-
-    return NextResponse.json(data);
+    return Response.json(post);
   } catch (error) {
-    console.error('Error:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error('Error creating post:', error);
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
