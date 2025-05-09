@@ -4,13 +4,11 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  // 테스트 사용자 생성
-  const testUserPassword = await bcrypt.hash('password123', 10);
+  // Create test user
   const testUser = await prisma.profile.create({
     data: {
       username: 'testuser',
       fullName: '테스트 사용자',
-      email: 'test@example.com',
       role: 'USER',
       level: 1,
       points: 0,
@@ -25,18 +23,18 @@ async function main() {
     }
   });
 
-  // 테스트 게시물 생성
+  // Create test post
   const testPost = await prisma.post.create({
     data: {
-      title: '테스트 게시물',
-      content: '이것은 테스트 게시물입니다.',
+      title: '테스트 게시글',
+      content: '이것은 테스트 게시글입니다.',
       authorId: testUser.id,
-      status: 'published',
+      status: 'PUBLISHED',
       publishedAt: new Date()
     }
   });
 
-  // 테스트 댓글 생성
+  // Create test comment
   await prisma.comment.create({
     data: {
       content: '테스트 댓글입니다.',
@@ -45,11 +43,11 @@ async function main() {
     }
   });
 
-  // 테스트 할 일 생성
+  // Create test todo
   await prisma.todo.create({
     data: {
-      title: '테스트 할 일',
-      description: '이것은 테스트 할 일입니다.',
+      title: '테스트 할일',
+      description: '이것은 테스트 할일입니다.',
       priority: 'medium',
       status: 'pending',
       userId: testUser.id
