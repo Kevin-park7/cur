@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Calendar from 'react-calendar';
-import type { Value as CalendarValue } from 'react-calendar/dist/cjs/shared/types';
 import { Button } from '@/components/ui/Button';
 import { Loader2 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
@@ -13,6 +12,9 @@ import './calendar.css';
 
 type Priority = 'low' | 'medium' | 'high';
 type TodoStatus = 'pending' | 'completed' | 'cancelled';
+
+// Calendar 타입 정의
+type CalendarValue = Date | Date[] | null;
 
 interface Todo {
   id: string;
