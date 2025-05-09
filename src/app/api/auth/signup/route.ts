@@ -1,50 +1,59 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
-    const { name, email, password } = await request.json();
+    const { username, password, fullName } = await request.json();
 
-    if (!name || !email || !password) {
+    if (!username || !password) {
       return NextResponse.json(
-        { error: '이름, 이메일, 비밀번호는 필수입니다.' },
+        { error: 'Username and password are required' },
         { status: 400 }
       );
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
+    const existingUser = await prisma.profile.findUnique({
+      where: { username }
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: '이미 사용 중인 이메일입니다.' },
+        { error: 'Username already exists' },
         { status: 400 }
       );
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await prisma.user.create({
+    const user = await prisma.profile.create({
       data: {
-        name,
-        email,
-        password: hashedPassword
+        username,
+        password: hashedPassword,
+        fullName: fullName || username,
+        role: 'USER',
+        level: 1,
+        points: 0,
+        userSettings: {
+          create: {
+            theme: 'light',
+            language: 'en',
+            notifications: true
+          }
+        }
       }
     });
 
     return NextResponse.json({
       id: user.id,
-      name: user.name,
-      email: user.email
+      username: user.username,
+      fullName: user.fullName,
+      role: user.role
     });
   } catch (error) {
-    console.error('Error in signup:', error);
+    console.error('Signup error:', error);
     return NextResponse.json(
-      { error: '회원가입 중 오류가 발생했습니다.' },
+      { error: 'Error creating user' },
       { status: 500 }
     );
   }
