@@ -1,23 +1,26 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Calendar from 'react-calendar';
-import type { Value } from 'react-calendar/dist/cjs/shared/types';
+import type { Value } from 'react-calendar';
 import { Button } from '@/components/ui/Button';
 import { Loader2 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import 'react-calendar/dist/Calendar.css';
 import './calendar.css';
 
+type Priority = 'low' | 'medium' | 'high';
+type TodoStatus = 'pending' | 'completed' | 'cancelled';
+
 interface Todo {
   id: string;
   title: string;
   description?: string;
   dueDate?: Date;
-  priority: string;
-  status: string;
+  priority: Priority;
+  status: TodoStatus;
   createdAt: Date;
   updatedAt: Date;
   userId: string;
@@ -50,19 +53,31 @@ export default function TodoPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const { data: session, status } = useSession();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchTodos = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/todos');
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
+
+      const response = await fetch('/api/todos', {
+        signal: abortControllerRef.current.signal
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch todos');
       }
       const data = await response.json();
       setTodos(data);
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return;
+      }
       console.error('Error fetching todos:', error);
       setError('할 일을 불러오는데 실패했습니다.');
     } finally {
@@ -79,9 +94,15 @@ export default function TodoPage() {
     if (status === 'authenticated') {
       fetchTodos();
     }
-  }, [status, router, fetchTodos]);
 
-  const handleDateChange = (value: Value) => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [status, router]);
+
+  const handleDateChange = useCallback((value: Value) => {
     if (value instanceof Date) {
       setSelectedDate(value);
     } else if (Array.isArray(value) && value[0] instanceof Date) {
@@ -89,10 +110,12 @@ export default function TodoPage() {
     } else {
       setSelectedDate(null);
     }
-  };
+  }, []);
 
   const handleAddTodo = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     if (!session?.user) {
       alert('로그인이 필요합니다.');
       router.push('/auth/login');
@@ -102,7 +125,7 @@ export default function TodoPage() {
     const formData = new FormData(e.currentTarget);
     const title = formData.get('title') as string;
     const description = formData.get('description') as string;
-    const priority = formData.get('priority') as string;
+    const priority = formData.get('priority') as Priority;
 
     if (!title.trim()) {
       alert('제목을 입력해주세요.');
@@ -110,6 +133,7 @@ export default function TodoPage() {
     }
 
     try {
+      setIsSubmitting(true);
       const response = await fetch('/api/todos', {
         method: 'POST',
         headers: {
@@ -120,7 +144,7 @@ export default function TodoPage() {
           description: description?.trim(),
           priority,
           dueDate: selectedDate,
-          status: 'pending',
+          status: 'pending' as TodoStatus,
         }),
       });
 
@@ -135,6 +159,8 @@ export default function TodoPage() {
     } catch (error) {
       console.error('Error creating todo:', error);
       alert(error instanceof Error ? error.message : '할 일 생성 중 오류가 발생했습니다.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -166,50 +192,62 @@ export default function TodoPage() {
     }
   };
 
-  const getTodosForDate = (date: Date) => {
+  const getTodosForDate = useCallback((date: Date) => {
     return todos.filter(todo => {
       if (!todo.dueDate) return false;
       const todoDate = new Date(todo.dueDate);
+      const compareDate = new Date(date);
+      
       return (
-        todoDate.getDate() === date.getDate() &&
-        todoDate.getMonth() === date.getMonth() &&
-        todoDate.getFullYear() === date.getFullYear()
+        todoDate.getUTCDate() === compareDate.getUTCDate() &&
+        todoDate.getUTCMonth() === compareDate.getUTCMonth() &&
+        todoDate.getUTCFullYear() === compareDate.getUTCFullYear()
       );
     });
-  };
+  }, [todos]);
 
-  const formatDate = (date: Date) => {
-    return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
-  };
+  const formatDate = useCallback((date: Date) => {
+    return new Intl.DateTimeFormat('ko-KR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }).format(date);
+  }, []);
 
-  const getHolidayName = (date: Date) => {
+  const getHolidayName = useCallback((date: Date) => {
     const dateString = date.toISOString().split('T')[0];
     return holidays[dateString];
-  };
+  }, []);
 
-  const getTileContent = ({ date }: { date: Date }) => {
+  const getTileContent = useCallback(({ date }: { date: Date }) => {
     const holiday = getHolidayName(date);
     if (holiday) {
       return (
-        <div className="holiday-name">
+        <div className="holiday-name" role="text" aria-label={`${formatDate(date)} ${holiday}`}>
           {holiday}
         </div>
       );
     }
     return null;
-  };
+  }, [getHolidayName, formatDate]);
 
-  const getTileClassName = ({ date }: { date: Date }) => {
+  const getTileClassName = useCallback(({ date }: { date: Date }) => {
     const classes = [];
     const hasTask = getTodosForDate(date).length > 0;
     if (hasTask) classes.push('has-task');
     if (getHolidayName(date)) classes.push('holiday');
     return classes.join(' ');
-  };
+  }, [getTodosForDate, getHolidayName]);
+
+  const priorityLabels = useMemo(() => ({
+    low: '낮음',
+    medium: '중간',
+    high: '높음'
+  }), []);
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" role="status" aria-label="로딩 중">
         <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-indigo-500"></div>
       </div>
     );
@@ -222,7 +260,7 @@ export default function TodoPage() {
   if (loading) {
     return (
       <div className="container mx-auto py-8">
-        <div className="flex justify-center items-center min-h-[400px]">
+        <div className="flex justify-center items-center min-h-[400px]" role="status" aria-label="할 일 목록 로딩 중">
           <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
         </div>
       </div>
@@ -232,12 +270,13 @@ export default function TodoPage() {
   if (error) {
     return (
       <div className="container mx-auto py-8">
-        <div className="text-center text-red-500 py-8">
+        <div className="text-center text-red-500 py-8" role="alert">
           {error}
           <Button
             variant="outline"
             className="mt-4"
             onClick={fetchTodos}
+            aria-label="다시 시도"
           >
             다시 시도
           </Button>
@@ -253,7 +292,7 @@ export default function TodoPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-8">할 일 관리</h1>
-            <form onSubmit={handleAddTodo} className="space-y-4">
+            <form onSubmit={handleAddTodo} className="space-y-4" aria-label="할 일 추가 폼">
               <div>
                 <label htmlFor="title" className="block text-sm font-medium text-gray-700">
                   제목
@@ -265,6 +304,8 @@ export default function TodoPage() {
                   required
                   maxLength={100}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                  disabled={isSubmitting}
+                  aria-required="true"
                 />
               </div>
               <div>
@@ -277,6 +318,8 @@ export default function TodoPage() {
                   rows={3}
                   maxLength={500}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                  disabled={isSubmitting}
+                  aria-label="할 일 설명"
                 />
               </div>
               <div>
@@ -288,10 +331,12 @@ export default function TodoPage() {
                   name="priority"
                   required
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+                  disabled={isSubmitting}
+                  aria-required="true"
                 >
-                  <option value="low">낮음</option>
-                  <option value="medium">중간</option>
-                  <option value="high">높음</option>
+                  <option value="low">{priorityLabels.low}</option>
+                  <option value="medium">{priorityLabels.medium}</option>
+                  <option value="high">{priorityLabels.high}</option>
                 </select>
               </div>
               <div>
@@ -305,14 +350,25 @@ export default function TodoPage() {
                     className="w-full"
                     tileContent={getTileContent}
                     tileClassName={getTileClassName}
+                    disabled={isSubmitting}
+                    aria-label="마감일 선택"
                   />
                 </div>
               </div>
               <Button
                 type="submit"
                 className="w-full bg-green-600 hover:bg-green-700"
+                disabled={isSubmitting}
+                aria-label={isSubmitting ? "할 일 추가 중" : "할 일 추가"}
               >
-                할 일 추가
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    처리 중...
+                  </>
+                ) : (
+                  '할 일 추가'
+                )}
               </Button>
             </form>
           </div>
@@ -321,11 +377,12 @@ export default function TodoPage() {
             {todos.length === 0 ? (
               <p className="text-gray-500">등록된 할 일이 없습니다.</p>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-4" role="list" aria-label="할 일 목록">
                 {todos.map((todo) => (
                   <div
                     key={todo.id}
                     className="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow"
+                    role="listitem"
                   >
                     <div className="flex justify-between items-start">
                       <div>
@@ -334,9 +391,9 @@ export default function TodoPage() {
                           <p className="mt-1 text-gray-600">{todo.description}</p>
                         )}
                         <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
-                          <span>우선순위: {todo.priority}</span>
+                          <span>우선순위: {priorityLabels[todo.priority]}</span>
                           {todo.dueDate && (
-                            <span>마감일: {new Date(todo.dueDate).toLocaleDateString()}</span>
+                            <span>마감일: {formatDate(new Date(todo.dueDate))}</span>
                           )}
                         </div>
                       </div>
@@ -344,6 +401,8 @@ export default function TodoPage() {
                         variant="destructive"
                         size="sm"
                         onClick={() => handleDeleteTodo(todo.id)}
+                        disabled={isSubmitting}
+                        aria-label={`${todo.title} 삭제`}
                       >
                         삭제
                       </Button>
