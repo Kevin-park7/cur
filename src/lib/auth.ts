@@ -8,37 +8,37 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
-        email: { label: 'Email', type: 'email' },
+        username: { label: 'Username', type: 'text' },
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error('이메일과 비밀번호를 입력해주세요.');
+        if (!credentials?.username || !credentials?.password) {
+          throw new Error('아이디와 비밀번호를 입력해주세요.');
         }
 
-        const user = await prisma.user.findUnique({
+        const user = await prisma.profile.findUnique({
           where: {
-            email: credentials.email
+            username: credentials.username
           }
         });
 
         if (!user) {
-          throw new Error('이메일 또는 비밀번호가 일치하지 않습니다.');
+          throw new Error('아이디 또는 비밀번호가 일치하지 않습니다.');
         }
 
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
-          user.password
+          user.password || ''
         );
 
         if (!isPasswordValid) {
-          throw new Error('이메일 또는 비밀번호가 일치하지 않습니다.');
+          throw new Error('아이디 또는 비밀번호가 일치하지 않습니다.');
         }
 
         return {
           id: user.id,
-          email: user.email,
-          name: user.name,
+          username: user.username,
+          name: user.fullName,
           role: user.role
         };
       }
