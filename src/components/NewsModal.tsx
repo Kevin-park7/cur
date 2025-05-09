@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
 
-interface News {
+interface Post {
   id: string;
   title: string;
   content: string;
-  url: string;
-  imageUrl?: string | null;
-  source: string;
-  publishedAt: string;
+  excerpt?: string | null;
+  status: string;
+  publishedAt: string | null;
+  author: {
+    username: string | null;
+    fullName: string | null;
+  };
 }
 
 interface NewsModalProps {
   show: boolean;
   onClose: () => void;
-  newsList: News[];
+  newsList: Post[];
 }
 
 const NewsModal: React.FC<NewsModalProps> = ({ show, onClose, newsList }) => {
@@ -63,17 +66,15 @@ const NewsModal: React.FC<NewsModalProps> = ({ show, onClose, newsList }) => {
           </button>
         </div>
         <ul className="space-y-4">
-          {newsList.map((article, idx) => (
-            <li key={article.id || idx} className="border-b pb-2">
-              <a
-                href={article.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block hover:bg-gray-50 p-2 rounded-lg transition-colors"
-              >
-                <h3 className="font-medium text-gray-900">{idx + 1}. {article.title}</h3>
-                <p className="text-sm text-gray-500 mt-1">{article.content}</p>
-              </a>
+          {newsList.map((post, idx) => (
+            <li key={post.id} className="border-b pb-2">
+              <div className="block hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                <h3 className="font-medium text-gray-900">{idx + 1}. {post.title}</h3>
+                <p className="text-sm text-gray-500 mt-1">{post.excerpt || post.content}</p>
+                <div className="text-xs text-gray-400 mt-2">
+                  {post.author.fullName || post.author.username} • {new Date(post.publishedAt || '').toLocaleDateString()}
+                </div>
+              </div>
             </li>
           ))}
         </ul>

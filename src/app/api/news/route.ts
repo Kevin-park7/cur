@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]/auth';
 
 interface NewsInput {
   title: string;
@@ -12,21 +14,32 @@ interface NewsInput {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const newsList: NewsInput[] = await request.json();
-    const created = await prisma.news.createMany({
+    const created = await prisma.post.createMany({
       data: newsList.map((news: NewsInput) => ({
         title: news.title,
         content: news.content,
         url: news.url,
         imageUrl: news.imageUrl || null,
         source: news.source,
+        authorId: session.user.id,
+        status: 'PUBLISHED',
         publishedAt: new Date(news.publishedAt)
       })),
       skipDuplicates: true
     });
     return Response.json({ success: true, count: created.count });
   } catch (error) {
-    return Response.json({ error: 'DB 저장 실패', detail: String(error) }, { status: 500 });
+    console.error('Error creating news:', error);
+    return Response.json({ error: 'Error creating news' }, { status: 500 });
   }
 }
 
@@ -34,8 +47,8 @@ export async function GET() {
   try {
     const news = await prisma.post.findMany({
       where: {
-        status: 'published',
-        isDeleted: false
+        status: 'PUBLISHED',
+        deletedAt: null
       },
       orderBy: {
         publishedAt: 'desc'
@@ -47,7 +60,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching news:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch news' },
+      { error: 'Error fetching news' },
       { status: 500 }
     );
   }
