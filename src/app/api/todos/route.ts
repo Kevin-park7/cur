@@ -3,11 +3,11 @@ import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user) {
+    if (!session) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
@@ -31,20 +31,19 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user) {
+    if (!session) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const body = await request.json();
-    const { title, description, priority, dueDate, status } = body;
+    const { title, description, status, priority, dueDate } = await request.json();
 
     const todo = await prisma.todo.create({
       data: {
         title,
         description,
+        status,
         priority,
         dueDate: dueDate ? new Date(dueDate) : null,
-        status,
         userId: session.user.id
       }
     });
