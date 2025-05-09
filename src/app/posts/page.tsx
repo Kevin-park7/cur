@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import {
@@ -43,7 +43,7 @@ export default function PostsPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
 
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/posts');
@@ -58,7 +58,7 @@ export default function PostsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -69,9 +69,9 @@ export default function PostsPage() {
     if (status === 'authenticated') {
       fetchPosts();
     }
-  }, [status, router]);
+  }, [status, router, fetchPosts]);
 
-  async function handleDelete(postId: string) {
+  const handleDelete = async (postId: string) => {
     try {
       if (!session?.user) {
         alert('로그인이 필요합니다.');
@@ -93,7 +93,7 @@ export default function PostsPage() {
       console.error('Error in handleDelete:', error);
       alert('게시글 삭제 중 오류가 발생했습니다.');
     }
-  }
+  };
 
   if (status === 'loading') {
     return (
