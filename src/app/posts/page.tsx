@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import {
@@ -13,7 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/Table';
 import { Loader2 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSession } from 'next-auth/react';
 
 interface Post {
   id: string;
@@ -41,65 +40,51 @@ export default function PostsPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const supabase = createClientComponentClient();
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { data: session, status } = useSession();
+
+  const fetchPosts = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/posts');
+      if (!response.ok) {
+        throw new Error('Failed to fetch posts');
+      }
+      const data = await response.json();
+      setPosts(data);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      setError('게시글을 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (status === 'unauthenticated') {
       router.push('/auth/login');
       return;
     }
 
-    const fetchPosts = async () => {
-      try {
-        setLoading(true);
-        console.log('Fetching posts...');
-        const { data, error } = await supabase
-          .from('posts')
-          .select('*')
-          .eq('isDeleted', false)
-          .order('createdAt', { ascending: false });
-
-        if (error) {
-          console.error('Error fetching posts:', error);
-          return;
-        }
-
-        console.log('Posts fetched successfully:', data);
-        setPosts(data || []);
-      } catch (error) {
-        console.error('Error in fetchPosts:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPosts();
-  }, [user, authLoading, router, supabase]);
+    if (status === 'authenticated') {
+      fetchPosts();
+    }
+  }, [status, router]);
 
   async function handleDelete(postId: string) {
     try {
-      console.log('Attempting to delete post:', postId);
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        console.log('No session found, redirecting to login');
+      if (!session?.user) {
         alert('로그인이 필요합니다.');
         router.push('/auth/login');
         return;
       }
 
-      const { error } = await supabase
-        .from('posts')
-        .update({ isDeleted: true })
-        .eq('id', postId)
-        .eq('authorId', session.user.id);
+      const response = await fetch(`/api/posts/${postId}`, {
+        method: 'DELETE',
+      });
 
-      if (error) {
-        console.error('Error deleting post:', error);
-        alert('게시글 삭제 중 오류가 발생했습니다.');
-        return;
+      if (!response.ok) {
+        throw new Error('Failed to delete post');
       }
 
       console.log('Post deleted successfully');
@@ -110,7 +95,7 @@ export default function PostsPage() {
     }
   }
 
-  if (authLoading) {
+  if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-indigo-500"></div>
@@ -118,7 +103,7 @@ export default function PostsPage() {
     );
   }
 
-  if (!user) {
+  if (status === 'unauthenticated') {
     return null; // 리다이렉트 중이므로 아무것도 표시하지 않음
   }
 
@@ -140,7 +125,7 @@ export default function PostsPage() {
           <Button
             variant="outline"
             className="mt-4"
-            onClick={() => fetchPosts()}
+            onClick={fetchPosts}
           >
             다시 시도
           </Button>
