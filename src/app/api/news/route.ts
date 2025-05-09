@@ -6,9 +6,6 @@ import { authOptions } from '../auth/[...nextauth]/auth';
 interface NewsInput {
   title: string;
   content: string;
-  url: string;
-  imageUrl?: string;
-  source: string;
   publishedAt: string;
 }
 

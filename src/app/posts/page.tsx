@@ -19,10 +19,22 @@ interface Post {
   id: string;
   title: string;
   content: string;
-  created_at: string;
+  excerpt?: string;
+  status: string;
   views: number;
-  user_id: string;
-  is_deleted: boolean;
+  likesCount: number;
+  commentsCount: number;
+  isFeatured: boolean;
+  isDeleted: boolean;
+  publishedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  authorId: string;
+  categoryId?: string;
+  author: {
+    username?: string;
+    fullName?: string;
+  };
 }
 
 export default function PostsPage() {
@@ -46,8 +58,8 @@ export default function PostsPage() {
         const { data, error } = await supabase
           .from('posts')
           .select('*')
-          .eq('is_deleted', false)
-          .order('created_at', { ascending: false });
+          .eq('isDeleted', false)
+          .order('createdAt', { ascending: false });
 
         if (error) {
           console.error('Error fetching posts:', error);
@@ -80,9 +92,9 @@ export default function PostsPage() {
 
       const { error } = await supabase
         .from('posts')
-        .update({ is_deleted: true })
+        .update({ isDeleted: true })
         .eq('id', postId)
-        .eq('user_id', session.user.id);
+        .eq('authorId', session.user.id);
 
       if (error) {
         console.error('Error deleting post:', error);
@@ -183,7 +195,7 @@ export default function PostsPage() {
                     </a>
                   </TableCell>
                   <TableCell className="text-gray-600">
-                    {new Date(post.created_at).toLocaleDateString()}
+                    {new Date(post.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-gray-600">{post.views}</TableCell>
                   <TableCell>

@@ -163,4 +163,12 @@ model Notification {
   // Relations
   user        Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String
+}
+
+model Trending {
+  id          String   @id @default(uuid())
+  title       String
+  rank        Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 } 
