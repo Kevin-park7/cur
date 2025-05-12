@@ -1,8 +1,9 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useSession, signIn as nextAuthSignIn, signOut as nextAuthSignOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import type { Profile } from '@/lib/supabase';
 
 interface User {
   id: string;
@@ -20,34 +21,70 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { data: session, status } = useSession();
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    if (session?.user) {
-      setUser({
-        id: session.user.id,
-        username: session.user.username || ''
-      });
-    } else {
-      setUser(null);
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setUser(null);
+        setLoading(false);
+      }
+    });
+
+    // Listen for changes on auth state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setUser(null);
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('id, username')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+
+      if (profile) {
+        setUser({
+          id: profile.id,
+          username: profile.username
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [session]);
+  };
 
   const signIn = async (username: string, password: string) => {
     try {
-      const result = await nextAuthSignIn('credentials', {
-        username,
-        password,
-        redirect: false,
+      const { data: { user }, error } = await supabase.auth.signInWithPassword({
+        email: username,
+        password
       });
 
-      if (result?.error) {
-        throw new Error(result.error);
-      }
+      if (error) throw error;
 
-      router.push('/');
+      if (user) {
+        await fetchProfile(user.id);
+        router.push('/');
+      }
     } catch (error) {
       console.error('Sign in error:', error);
       throw error;
@@ -56,20 +93,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (username: string, password: string) => {
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
+      const { data: { user }, error } = await supabase.auth.signUp({
+        email: username,
+        password
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to sign up');
-      }
+      if (error) throw error;
 
-      await signIn(username, password);
+      if (user) {
+        // Create profile
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: user.id,
+              username: username,
+              role: 'USER',
+              level: 1,
+              points: 0,
+              is_verified: false
+            }
+          ]);
+
+        if (profileError) throw profileError;
+
+        router.push('/auth/login?message=회원가입이 완료되었습니다. 로그인해주세요.');
+      }
     } catch (error) {
       console.error('Sign up error:', error);
       throw error;
@@ -78,7 +127,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      await nextAuthSignOut({ redirect: false });
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
       setUser(null);
       router.push('/auth/login');
     } catch (error) {
@@ -89,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = {
     user,
-    loading: status === 'loading',
+    loading,
     signIn,
     signUp,
     signOut,

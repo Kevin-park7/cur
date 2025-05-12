@@ -1,80 +1,35 @@
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
 
-export async function GET(request: Request) {
+export async function GET() {
+  const supabase = createRouteHandlerClient({ cookies });
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    // Check if the current user is an admin
-    const currentUser = await prisma.profile.findUnique({
-      where: { id: session.user.id },
-      select: { role: true }
-    });
-
-    if (!currentUser || currentUser.role !== 'ADMIN') {
-      return new NextResponse('Forbidden', { status: 403 });
-    }
-
-    const users = await prisma.profile.findMany({
-      select: {
-        id: true,
-        username: true,
-        role: true,
-        level: true,
-        points: true,
-        createdAt: true
-      }
-    });
-
-    return NextResponse.json(users);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, username, full_name, email, created_at, updated_at');
+    if (error) throw error;
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Error:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json({ error: '사용자 목록 조회 중 오류가 발생했습니다.' }, { status: 500 });
   }
 }
 
 export async function PATCH(request: Request) {
+  const supabase = createRouteHandlerClient({ cookies });
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    // Check if the current user is an admin
-    const currentUser = await prisma.profile.findUnique({
-      where: { id: session.user.id },
-      select: { role: true }
-    });
-
-    if (!currentUser || currentUser.role !== 'ADMIN') {
-      return new NextResponse('Forbidden', { status: 403 });
-    }
-
     const { id, role, level, points } = await request.json();
-
-    const user = await prisma.profile.update({
-      where: { id },
-      data: { role, level, points },
-      select: {
-        id: true,
-        username: true,
-        role: true,
-        level: true,
-        points: true,
-        createdAt: true
-      }
-    });
-
-    return NextResponse.json(user);
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ role, level, points })
+      .eq('id', id)
+      .select('id, username, role, level, points, created_at')
+      .single();
+    if (error) throw error;
+    if (!data) return NextResponse.json({ error: '사용자를 찾을 수 없습니다.' }, { status: 404 });
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Error:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error('Error updating user:', error);
+    return NextResponse.json({ error: '사용자 업데이트 중 오류가 발생했습니다.' }, { status: 500 });
   }
 } 

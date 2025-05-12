@@ -1,19 +1,21 @@
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
 
-export async function GET(req: Request) {
+export async function GET() {
+  const supabase = createRouteHandlerClient({ cookies });
   try {
-    const trending = await prisma.trending.findMany({
-      orderBy: { rank: 'asc' },
-      take: 100,
-    });
-
-    return NextResponse.json(trending);
+    const since = new Date();
+    since.setDate(since.getDate() - 7);
+    const { data, error } = await supabase
+      .from('posts')
+      .select('id, title, views, created_at, user_id')
+      .gte('created_at', since.toISOString())
+      .order('views', { ascending: false })
+      .limit(10);
+    if (error) throw error;
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching trending:', error);
-    return NextResponse.json(
-      { error: 'Error fetching trending' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: '트렌딩 데이터 조회 중 오류가 발생했습니다.' }, { status: 500 });
   }
 } 

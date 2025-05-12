@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import type { Todo } from '@/lib/supabase';
 import Calendar from 'react-calendar';
 import { Button } from '@/components/ui/Button';
 import { Loader2 } from 'lucide-react';
@@ -58,7 +60,7 @@ export default function TodoPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user } = useAuth();
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchTodos = useCallback(async () => {
@@ -69,14 +71,14 @@ export default function TodoPage() {
       }
       abortControllerRef.current = new AbortController();
 
-      const response = await fetch('/api/todos', {
-        signal: abortControllerRef.current.signal
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch todos');
-      }
-      const data = await response.json();
-      setTodos(data);
+      const { data, error } = await supabase
+        .from('todos')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTodos(data || []);
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         return;
@@ -86,24 +88,22 @@ export default function TodoPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (!user) {
       router.push('/auth/login');
       return;
     }
 
-    if (status === 'authenticated') {
-      fetchTodos();
-    }
+    fetchTodos();
 
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
-  }, [status, router]);
+  }, [user, router]);
 
   const handleDateChange = useCallback((value: Value) => {
     if (value instanceof Date) {
@@ -119,7 +119,7 @@ export default function TodoPage() {
     e.preventDefault();
     if (isSubmitting) return;
 
-    if (!session?.user) {
+    if (!user) {
       alert('로그인이 필요합니다.');
       router.push('/auth/login');
       return;
@@ -137,26 +137,24 @@ export default function TodoPage() {
 
     try {
       setIsSubmitting(true);
-      const response = await fetch('/api/todos', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description?.trim(),
-          priority,
-          dueDate: selectedDate,
-          status: 'pending' as TodoStatus,
-        }),
-      });
+      const { data, error } = await supabase
+        .from('todos')
+        .insert([
+          {
+            title: title.trim(),
+            description: description?.trim(),
+            priority,
+            dueDate: selectedDate,
+            status: 'pending' as TodoStatus,
+            user_id: user.id,
+          }
+        ])
+        .select()
+        .single();
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to create todo');
-      }
+      if (error) throw error;
 
-      await fetchTodos();
+      setTodos([data, ...todos]);
       e.currentTarget.reset();
       setSelectedDate(new Date());
     } catch (error) {
@@ -173,22 +171,21 @@ export default function TodoPage() {
     }
 
     try {
-      if (!session?.user) {
+      if (!user) {
         alert('로그인이 필요합니다.');
         router.push('/auth/login');
         return;
       }
 
-      const response = await fetch(`/api/todos/${todoId}`, {
-        method: 'DELETE',
-      });
+      const { error } = await supabase
+        .from('todos')
+        .delete()
+        .eq('id', todoId)
+        .eq('user_id', user.id);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to delete todo');
-      }
+      if (error) throw error;
 
-      await fetchTodos();
+      setTodos(todos.filter(todo => todo.id !== todoId));
     } catch (error) {
       console.error('Error deleting todo:', error);
       alert(error instanceof Error ? error.message : '할 일 삭제 중 오류가 발생했습니다.');
@@ -248,24 +245,10 @@ export default function TodoPage() {
     high: '높음'
   }), []);
 
-  if (status === 'loading') {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" role="status" aria-label="로딩 중">
         <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-indigo-500"></div>
-      </div>
-    );
-  }
-
-  if (status === 'unauthenticated') {
-    return null;
-  }
-
-  if (loading) {
-    return (
-      <div className="container mx-auto py-8">
-        <div className="flex justify-center items-center min-h-[400px]" role="status" aria-label="할 일 목록 로딩 중">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-        </div>
       </div>
     );
   }
@@ -399,15 +382,28 @@ export default function TodoPage() {
                           )}
                         </div>
                       </div>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteTodo(todo.id)}
-                        disabled={isSubmitting}
-                        aria-label={`${todo.title} 삭제`}
-                      >
-                        삭제
-                      </Button>
+                      <div className="flex space-x-2">
+                        <select
+                          value={todo.status}
+                          onChange={(e) => {
+                            handleStatusChange(todo.id, e.target.value as TodoStatus);
+                          }}
+                          className="border rounded p-1"
+                        >
+                          <option value="pending">대기중</option>
+                          <option value="completed">완료</option>
+                          <option value="cancelled">취소</option>
+                        </select>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteTodo(todo.id)}
+                          disabled={isSubmitting}
+                          aria-label={`${todo.title} 삭제`}
+                        >
+                          삭제
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}

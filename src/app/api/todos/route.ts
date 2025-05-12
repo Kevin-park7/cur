@@ -1,107 +1,140 @@
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    
+    const supabase = createRouteHandlerClient({ cookies });
+    const { data: { session } } = await supabase.auth.getSession();
+
     if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    const todos = await prisma.todo.findMany({
-      where: {
-        userId: session.user.id
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+    const { data: todos, error } = await supabase
+      .from('todos')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
 
     return NextResponse.json(todos);
   } catch (error) {
-    console.error('Error:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error('Error fetching todos:', error);
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    
+    const supabase = createRouteHandlerClient({ cookies });
+    const { data: { session } } = await supabase.auth.getSession();
+
     if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    const { title, description, status, priority, dueDate } = await request.json();
+    const { title, description, due_date, priority } = await request.json();
 
-    const todo = await prisma.todo.create({
-      data: {
-        title,
-        description,
-        status,
-        priority,
-        dueDate: dueDate ? new Date(dueDate) : null,
-        userId: session.user.id
-      }
-    });
+    const { data: todo, error } = await supabase
+      .from('todos')
+      .insert([
+        {
+          title,
+          description,
+          due_date,
+          priority,
+          status: 'pending',
+          user_id: session.user.id
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
 
     return NextResponse.json(todo);
   } catch (error) {
-    console.error('Error:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error('Error creating todo:', error);
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const supabase = createRouteHandlerClient({ cookies });
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { id, ...updates } = await request.json();
+
+    const { data: todo, error } = await supabase
+      .from('todos')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', session.user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json(todo);
+  } catch (error) {
+    console.error('Error updating todo:', error);
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }
 
 export async function DELETE(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
+    const supabase = createRouteHandlerClient({ cookies });
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     const { id } = await request.json();
 
-    await prisma.todo.delete({
-      where: {
-        id,
-        userId: session.user.id
-      }
-    });
+    const { error } = await supabase
+      .from('todos')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', session.user.id);
 
-    return new NextResponse('OK', { status: 200 });
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
-  }
-}
-
-export async function PATCH(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    const { id, status } = await request.json();
-
-    const todo = await prisma.todo.update({
-      where: {
-        id,
-        userId: session.user.id
-      },
-      data: {
-        status
-      }
-    });
-
-    return NextResponse.json(todo);
-  } catch (error) {
-    console.error('Error:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error('Error deleting todo:', error);
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 } 

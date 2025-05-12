@@ -2,29 +2,37 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    const { data: { session } } = await supabase.auth.getSession();
+    const { searchParams } = new URL(request.url);
+    const postId = searchParams.get('postId');
 
-    if (!session) {
+    if (!postId) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: 'Post ID is required' },
+        { status: 400 }
       );
     }
 
-    const { data: news, error } = await supabase
-      .from('news')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending: false });
+    const supabase = createRouteHandlerClient({ cookies });
+
+    const { data: comments, error } = await supabase
+      .from('comments')
+      .select(`
+        *,
+        user:user_id (
+          username,
+          full_name
+        )
+      `)
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true });
 
     if (error) throw error;
 
-    return NextResponse.json(news);
+    return NextResponse.json(comments);
   } catch (error) {
-    console.error('Error fetching news:', error);
+    console.error('Error fetching comments:', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }
@@ -44,27 +52,31 @@ export async function POST(request: Request) {
       );
     }
 
-    const { title, content, url, source } = await request.json();
+    const { content, postId } = await request.json();
 
-    const { data: news, error } = await supabase
-      .from('news')
+    const { data: comment, error } = await supabase
+      .from('comments')
       .insert([
         {
-          title,
           content,
-          url,
-          source,
+          post_id: postId,
           user_id: session.user.id
         }
       ])
-      .select()
+      .select(`
+        *,
+        user:user_id (
+          username,
+          full_name
+        )
+      `)
       .single();
 
     if (error) throw error;
 
-    return NextResponse.json(news);
+    return NextResponse.json(comment);
   } catch (error) {
-    console.error('Error creating news:', error);
+    console.error('Error creating comment:', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }
@@ -84,21 +96,27 @@ export async function PUT(request: Request) {
       );
     }
 
-    const { id, ...updates } = await request.json();
+    const { id, content } = await request.json();
 
-    const { data: news, error } = await supabase
-      .from('news')
-      .update(updates)
+    const { data: comment, error } = await supabase
+      .from('comments')
+      .update({ content })
       .eq('id', id)
       .eq('user_id', session.user.id)
-      .select()
+      .select(`
+        *,
+        user:user_id (
+          username,
+          full_name
+        )
+      `)
       .single();
 
     if (error) throw error;
 
-    return NextResponse.json(news);
+    return NextResponse.json(comment);
   } catch (error) {
-    console.error('Error updating news:', error);
+    console.error('Error updating comment:', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }
@@ -121,7 +139,7 @@ export async function DELETE(request: Request) {
     const { id } = await request.json();
 
     const { error } = await supabase
-      .from('news')
+      .from('comments')
       .delete()
       .eq('id', id)
       .eq('user_id', session.user.id);
@@ -130,7 +148,7 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting news:', error);
+    console.error('Error deleting comment:', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }

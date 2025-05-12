@@ -1,116 +1,61 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/auth';
-import prisma from '@/lib/prisma';
-import { NextRequest } from 'next/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 
-export async function GET(
-  request: NextRequest,
-  context: any
-) {
-  const id = context.params.id;
-
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  const supabase = createRouteHandlerClient({ cookies });
+  const { id } = params;
   try {
-    const post = await prisma.post.findUnique({
-      where: { id },
-      include: {
-        author: true,
-        comments: {
-          include: {
-            author: true
-          }
-        }
-      }
-    });
-
-    if (!post) {
-      return Response.json({ error: 'Post not found' }, { status: 404 });
-    }
-
-    return Response.json(post);
+    const { data, error } = await supabase
+      .from('posts')
+      .select(`*, profiles:user_id (username, full_name), comments (id)`)
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    if (!data) return NextResponse.json({ error: '게시글을 찾을 수 없습니다.' }, { status: 404 });
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching post:', error);
-    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: '게시글 조회 중 오류가 발생했습니다.' }, { status: 500 });
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  context: any
-) {
-  const id = context.params.id;
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  const supabase = createRouteHandlerClient({ cookies });
+  const { id } = params;
   try {
-    const body = await request.json();
-    const { title, content, status } = body;
-
-    const post = await prisma.post.findUnique({
-      where: { id },
-      select: { authorId: true }
-    });
-
-    if (!post) {
-      return Response.json({ error: 'Post not found' }, { status: 404 });
-    }
-
-    if (post.authorId !== session.user.id && session.user.role !== 'ADMIN') {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const updatedPost = await prisma.post.update({
-      where: { id },
-      data: {
-        title,
-        content,
-        status,
-        updatedAt: new Date()
-      }
-    });
-
-    return Response.json(updatedPost);
+    const { title, content } = await request.json();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: '인증 필요' }, { status: 401 });
+    const { error } = await supabase
+      .from('posts')
+      .update({ title, content, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('user_id', user.id);
+    if (error) throw error;
+    return NextResponse.json({ message: '수정 완료' });
   } catch (error) {
-    console.error('Error updating post:', error);
-    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: '게시글 수정 중 오류가 발생했습니다.' }, { status: 500 });
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  context: any
-) {
-  const id = context.params.id;
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  const supabase = createRouteHandlerClient({ cookies });
+  const { id } = params;
   try {
-    const post = await prisma.post.findUnique({
-      where: { id },
-      select: { authorId: true }
-    });
-
-    if (!post) {
-      return Response.json({ error: 'Post not found' }, { status: 404 });
-    }
-
-    if (post.authorId !== session.user.id && session.user.role !== 'ADMIN') {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    await prisma.post.update({
-      where: { id },
-      data: { isDeleted: true }
-    });
-
-    return Response.json({ message: 'Post deleted successfully' });
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: '인증 필요' }, { status: 401 });
+    const { error } = await supabase
+      .from('posts')
+      .update({ is_deleted: true })
+      .eq('id', id)
+      .eq('user_id', user.id);
+    if (error) throw error;
+    return NextResponse.json({ message: '삭제 완료' });
   } catch (error) {
-    console.error('Error deleting post:', error);
-    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: '게시글 삭제 중 오류가 발생했습니다.' }, { status: 500 });
   }
 } 
