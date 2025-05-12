@@ -6,8 +6,17 @@ import { supabase } from '@/lib/supabase';
 import type { Post } from '@/lib/supabase';
 import Comments from './Comments';
 
+// Post 타입 확장
+interface ExtendedPost extends Post {
+  profiles?: {
+    username: string;
+    full_name: string;
+  };
+  comments?: { id: string }[];
+}
+
 export default function PostsComponent() {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<ExtendedPost[]>([]);
   const [newPost, setNewPost] = useState({
     title: '',
     content: '',
@@ -162,7 +171,7 @@ export default function PostsComponent() {
                 <div className="flex items-center gap-2 mt-2 text-sm text-gray-500">
                   <span>{post.profiles?.full_name || post.profiles?.username}</span>
                   <span>•</span>
-                  <span>{new Date(post.published_at).toLocaleString()}</span>
+                  <span>{new Date(post.published_at || post.created_at).toLocaleString()}</span>
                   <span>•</span>
                   <span>{post.comments?.length || 0}개의 댓글</span>
                 </div>
@@ -171,7 +180,7 @@ export default function PostsComponent() {
                 )}
                 <p className="mt-4 text-gray-700">{post.content}</p>
               </div>
-              {user?.id === post.user_id && (
+              {user?.id === post.author_id && (
                 <button
                   onClick={() => handleDelete(post.id)}
                   className="text-red-500 hover:text-red-700"

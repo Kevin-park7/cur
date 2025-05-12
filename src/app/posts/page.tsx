@@ -6,8 +6,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import type { Post } from '@/lib/supabase';
 
+// Post 타입 확장
+interface ExtendedPost extends Post {
+  profiles?: {
+    username: string;
+    full_name: string;
+  };
+  comments?: { id: string }[];
+}
+
 export default function PostsPage() {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<ExtendedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { user } = useAuth();
@@ -48,6 +57,21 @@ export default function PostsPage() {
     }
   };
 
+  const handleDelete = async (postId: string) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .update({ is_deleted: true })
+        .eq('id', postId)
+        .eq('user_id', user.id);
+      if (error) throw error;
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+    } catch (error) {
+      alert('게시글 삭제 중 오류가 발생했습니다.');
+    }
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -67,7 +91,7 @@ export default function PostsPage() {
                 <div className="flex items-center gap-2 mt-2 text-sm text-gray-500">
                   <span>{post.profiles?.full_name || post.profiles?.username}</span>
                   <span>•</span>
-                  <span>{new Date(post.published_at).toLocaleString()}</span>
+                  <span>{new Date(post.published_at || post.created_at).toLocaleString()}</span>
                   <span>•</span>
                   <span>{post.comments?.length || 0}개의 댓글</span>
                 </div>

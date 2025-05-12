@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import type { Todo } from '@/lib/supabase';
+import type { Todo as SupabaseTodo } from '@/lib/supabase';
 import Calendar from 'react-calendar';
 import { Button } from '@/components/ui/Button';
 import { Loader2 } from 'lucide-react';
@@ -244,6 +244,25 @@ export default function TodoPage() {
     medium: '중간',
     high: '높음'
   }), []);
+
+  const handleStatusChange = async (todoId: string, status: TodoStatus) => {
+    if (!user) return;
+    if (isSubmitting) return;
+    try {
+      setIsSubmitting(true);
+      const { error } = await supabase
+        .from('todos')
+        .update({ status })
+        .eq('id', todoId)
+        .eq('user_id', user.id);
+      if (error) throw error;
+      setTodos((prev) => prev.map(todo => todo.id === todoId ? { ...todo, status } : todo));
+    } catch (error) {
+      alert('상태 변경 중 오류가 발생했습니다.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (

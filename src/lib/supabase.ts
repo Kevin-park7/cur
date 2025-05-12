@@ -70,4 +70,15 @@ export type Comment = {
   parent_id?: string;
   created_at: string;
   updated_at: string;
+};
+
+export type News = {
+  id: string;
+  title: string;
+  content: string;
+  url?: string;
+  source?: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
 }; 

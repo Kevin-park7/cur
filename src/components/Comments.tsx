@@ -9,8 +9,16 @@ interface CommentsProps {
   postId: string;
 }
 
+// Comment 타입 확장
+interface ExtendedComment extends Comment {
+  profiles?: {
+    username: string;
+    full_name: string;
+  };
+}
+
 export default function CommentsComponent({ postId }: CommentsProps) {
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [comments, setComments] = useState<ExtendedComment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
@@ -136,7 +144,7 @@ export default function CommentsComponent({ postId }: CommentsProps) {
                 </div>
                 <p className="mt-2 text-gray-700">{comment.content}</p>
               </div>
-              {user?.id === comment.user_id && (
+              {user?.id === comment.author_id && (
                 <button
                   onClick={() => handleDelete(comment.id)}
                   className="text-red-500 hover:text-red-700"
